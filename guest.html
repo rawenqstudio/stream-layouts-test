@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>GOŚĆ - Ustawienia</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+      body {
+        font-family: "Segoe UI", sans-serif;
+        text-align: center;
+        background: #222;
+        color: white;
+        padding: 20px;
+        margin: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #333;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      }
+      h1 {
+        margin-top: 0;
+        color: #00d2ff;
+      }
+      .video-wrapper {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16/9;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        border: 2px solid #555;
+      }
+      video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1);
+      }
+      #mute-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: red;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-weight: bold;
+        display: none;
+        box-shadow: 0 0 5px black;
+        font-size: 0.8em;
+        z-index: 10;
+      }
+      .settings-group {
+        text-align: left;
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        color: #ccc;
+        font-size: 0.9em;
+      }
+      select,
+      input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        background: #222;
+        border: 1px solid #555;
+        color: white;
+        border-radius: 5px;
+        box-sizing: border-box;
+      }
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        cursor: pointer;
+      }
+      input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+      }
+      button {
+        padding: 15px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        width: 100%;
+        margin-top: 10px;
+        transition: 0.2s;
+      }
+      button:hover {
+        background: #218838;
+      }
+      button:disabled {
+        background: #555;
+        cursor: not-allowed;
+      }
+      #logs {
+        margin-top: 20px;
+        color: #aaa;
+        font-size: 0.8em;
+        text-align: left;
+        background: #111;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+      .error {
+        color: #ff4444;
+      }
+      .success {
+        color: #00ff00;
+      }
+      #target-id {
+        display: none;
+      }
+      .footer-credits {
+        position: fixed;
+        bottom: 15px;
+        right: 20px;
+        color: #666;
+        font-size: 0.85em;
+        font-family: monospace;
+        user-select: none;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Ustawienia Studia</h1>
+
+      <div class="video-wrapper">
+        <video id="localVideo" autoplay muted playsinline></video>
+        <div id="mute-indicator">🔇 WYCISZONY</div>
+      </div>
+
+      <div class="settings-group">
+        <label>📷 Wybierz Kamerę:</label>
+        <select id="videoSource" onchange="startPreview()"></select>
+      </div>
+
+      <div class="settings-group">
+        <label>🎤 Wybierz Mikrofon:</label>
+        <select id="audioSource" onchange="startPreview()"></select>
+      </div>
+
+      <div class="settings-group">
+        <label class="checkbox-group">
+          <input type="checkbox" id="start-muted" checked />
+          <span>Dołącz z wyciszonym mikrofonem</span>
+        </label>
+
+        <label class="checkbox-group" title="Wymusza wysoki bitrate (6 Mbps)">
+          <input type="checkbox" id="high-bitrate" />
+          <span>🔥 Unlock Bitrate</span>
+        </label>
+      </div>
+
+      <div class="settings-group">
+        <label>Twoje Imię:</label>
+        <input type="text" id="username" placeholder="Wpisz swoje imię..." />
+      </div>
+
+      <input type="text" id="target-id" />
+      <button id="join-btn" onclick="joinRoom()">DOŁĄCZ DO STUDIA</button>
+
+      <div id="logs"></div>
+    </div>
+
+    <div class="footer-credits">from xrawenq for Goodiez</div>
+
+    <script>
+      function log(msg, type = "info") {
+        const logs = document.getElementById("logs");
+        const p = document.createElement("div");
+        p.innerText = `> ${msg}`;
+        if (type === "error") p.className = "error";
+        if (type === "success") p.className = "success";
+        logs.prepend(p);
+        console.log(msg);
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const useStunOnly = urlParams.get("stunonly");
+      const isMulti = urlParams.get("multi");
+
+      const selectedConfig = useStunOnly
+        ? [{ urls: "stun:stun.l.google.com:19302" }]
+        : [
+            { urls: "stun:stun.l.google.com:19302" },
+            {
+              urls: "turn:openrelay.metered.ca:80?transport=udp",
+              username: "openrelayproject",
+              credential: "openrelayproject",
+            },
+            {
+              urls: "turn:openrelay.metered.ca:443?transport=tcp",
+              username: "openrelayproject",
+              credential: "openrelayproject",
+            },
+          ];
+
+      const peer = new Peer(undefined, {
+        config: { iceServers: selectedConfig },
+      });
+
+      let localStream = null;
+      let globalConn = null; // Standard Mode
+      let directorConn = null; // Multi Mode
+
+      // Przechowujemy listę ID aktywnych połączeń wideo, aby nie dzwonić 2 razy
+      const activeCallIds = [];
+
+      const videoSelect = document.getElementById("videoSource");
+      const audioSelect = document.getElementById("audioSource");
+
+      window.onload = async function () {
+        const roomID = urlParams.get("room");
+        if (roomID) {
+          document.getElementById("target-id").value = roomID;
+          log(`Pokój wykryty: ${roomID}`);
+          await requestPermissions();
+          await getDevices();
+          startPreview();
+        } else {
+          log("BŁĄD: Brak ID pokoju w linku.", "error");
+          document.getElementById("join-btn").disabled = true;
+        }
+      };
+
+      async function requestPermissions() {
+        /* ... */ try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+          stream.getTracks().forEach((track) => track.stop());
+        } catch (err) {
+          alert("Brak uprawnień!");
+        }
+      }
+      async function getDevices() {
+        /* ... */ const devices =
+          await navigator.mediaDevices.enumerateDevices();
+        videoSelect.innerHTML = "";
+        audioSelect.innerHTML = "";
+        devices.forEach((device) => {
+          const option = document.createElement("option");
+          option.value = device.deviceId;
+          if (device.kind === "videoinput") {
+            option.text = device.label || `Kamera ${videoSelect.length + 1}`;
+            videoSelect.appendChild(option);
+          } else if (device.kind === "audioinput") {
+            option.text = device.label || `Mikrofon ${audioSelect.length + 1}`;
+            audioSelect.appendChild(option);
+          }
+        });
+      }
+      async function startPreview() {
+        if (localStream)
+          localStream.getTracks().forEach((track) => track.stop());
+        const constraints = {
+          video: {
+            deviceId: videoSelect.value
+              ? { exact: videoSelect.value }
+              : undefined,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: {
+            deviceId: audioSelect.value
+              ? { exact: audioSelect.value }
+              : undefined,
+          },
+        };
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia(constraints);
+          document.getElementById("localVideo").srcObject = localStream;
+          checkMuteState();
+        } catch (err) {
+          log("Błąd podglądu: " + err.name, "error");
+        }
+      }
+
+      document
+        .getElementById("start-muted")
+        .addEventListener("change", checkMuteState);
+      function checkMuteState() {
+        if (!localStream) return;
+        const shouldBeMuted = document.getElementById("start-muted").checked;
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+          audioTrack.enabled = !shouldBeMuted;
+          toggleMuteUI(shouldBeMuted);
+        }
+      }
+      function toggleMuteUI(isMuted) {
+        const ind = document.getElementById("mute-indicator");
+        ind.style.display = isMuted ? "block" : "none";
+      }
+
+      peer.on("open", (id) => log(`Gotowy. Twoje ID: ${id}`, "success"));
+
+      async function joinRoom() {
+        const targetId = document.getElementById("target-id").value;
+        const username = document.getElementById("username").value.trim();
+        const highBitrate = document.getElementById("high-bitrate").checked;
+        const btn = document.getElementById("join-btn");
+
+        btn.disabled = true;
+        btn.innerText = "Łączenie...";
+        videoSelect.disabled = true;
+        audioSelect.disabled = true;
+
+        log(`Dzwonię do OBS...`);
+
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack && "contentHint" in videoTrack) {
+          videoTrack.contentHint = "motion";
+          log("Ustawiono priorytet: Motion");
+        }
+
+        if (isMulti) {
+          // TRYB MULTI
+          log("Tryb Multi: Łączę z Reżyserem...");
+          directorConn = peer.connect(targetId);
+
+          directorConn.on("open", () => {
+            log("Połączono z Reżyserem. Pobieram listę ekranów...", "success");
+            directorConn.send({ type: "get-obs-list" });
+            directorConn.send({ type: "identify", name: username });
+            const isMuted = document.getElementById("start-muted").checked;
+            directorConn.send({ type: "mic-status", muted: isMuted });
+
+            setInterval(() => {
+              if (directorConn.open) directorConn.send({ type: "heartbeat" });
+            }, 2000);
+          });
+
+          directorConn.on("data", (data) => {
+            // Otrzymaliśmy listę OBS - dzwonimy do nowych
+            if (data.type === "obs-list") {
+              log(`Aktualizacja listy OBS: znaleziono ${data.targets.length}`);
+              data.targets.forEach((obsId) => {
+                // Sprawdzamy czy już nie dzwonimy do tego ID
+                if (!activeCallIds.includes(obsId)) {
+                  callSingleOBS(obsId, username, highBitrate);
+                }
+              });
+              btn.innerText = "JESTEŚ NA WIZJI (MULTI)";
+              btn.style.background = "#dc3545";
+            }
+
+            // Reżyser wymusza odświeżenie listy OBS
+            if (data.type === "force-sync") {
+              log(
+                "Otrzymano rozkaz synchronizacji. Szukam nowych ekranów...",
+                "info"
+              );
+              directorConn.send({ type: "get-obs-list" });
+            }
+
+            handleRemoteCommand(data);
+          });
+        } else {
+          // TRYB STANDARD
+          log("Tryb Standard: Dzwonię do OBS...");
+          callSingleOBS(targetId, username, highBitrate);
+        }
+
+        window.addEventListener("beforeunload", () => {
+          if (directorConn && directorConn.open)
+            directorConn.send({ type: "leave" });
+          if (globalConn && globalConn.open) globalConn.send({ type: "leave" });
+        });
+      }
+
+      function callSingleOBS(obsId, username, highBitrate) {
+        log(`Dzwonię do ekranu: ${obsId}`);
+
+        // Rejestrujemy połączenie w tablicy
+        activeCallIds.push(obsId);
+
+        const call = peer.call(obsId, localStream);
+        const conn = peer.connect(obsId);
+
+        if (!isMulti) globalConn = conn;
+
+        conn.on("open", () => {
+          const isMuted = document.getElementById("start-muted").checked;
+          conn.send({ type: "identify", name: username });
+          conn.send({ type: "mic-status", muted: isMuted });
+          if (!isMulti) {
+            log("Połączenie zestawione!", "success");
+            document.getElementById("join-btn").innerText = "JESTEŚ NA WIZJI";
+            document.getElementById("join-btn").style.background = "#dc3545";
+          }
+        });
+
+        // Obsługa rozłączenia (usuń z listy aktywnych, żeby można było zadzwonić ponownie)
+        call.on("close", () => {
+          const idx = activeCallIds.indexOf(obsId);
+          if (idx > -1) activeCallIds.splice(idx, 1);
+        });
+        call.on("error", () => {
+          const idx = activeCallIds.indexOf(obsId);
+          if (idx > -1) activeCallIds.splice(idx, 1);
+        });
+
+        if (highBitrate) {
+          setTimeout(() => {
+            const pc = call.peerConnection;
+            const sender = pc
+              .getSenders()
+              .find((s) => s.track.kind === "video");
+            if (sender) {
+              const params = sender.getParameters();
+              if (!params.encodings) params.encodings = [{}];
+              params.encodings[0].maxBitrate = 6000000;
+              sender
+                .setParameters(params)
+                .then(() => {})
+                .catch((e) => {});
+            }
+          }, 1000);
+        }
+
+        conn.on("data", (data) => handleRemoteCommand(data));
+        setInterval(() => {
+          if (conn.open) conn.send({ type: "heartbeat" });
+        }, 2000);
+      }
+
+      function handleRemoteCommand(data) {
+        if (data.type === "mute-cmd") {
+          const audioTrack = localStream.getAudioTracks()[0];
+          if (audioTrack) {
+            audioTrack.enabled = !data.state;
+            toggleMuteUI(data.state);
+            document.getElementById("start-muted").checked = data.state;
+
+            const msg = { type: "mic-status", muted: data.state };
+            if (directorConn && directorConn.open) directorConn.send(msg);
+            if (globalConn && globalConn.open) globalConn.send(msg);
+          }
+        }
+      }
+    </script>
+  </body>
+</html>

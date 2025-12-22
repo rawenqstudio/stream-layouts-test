@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>REŻYSERKA</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        background: #333;
+        color: white;
+        text-align: center;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      button {
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        transition: 0.2s;
+      }
+      .btn-layout {
+        background: #007bff;
+        width: 45%;
+        padding: 12px;
+        font-size: 14px;
+        margin: 5px;
+      }
+      .btn-layout:hover {
+        background: #0056b3;
+      }
+      .btn-tool {
+        width: 93%;
+        padding: 10px;
+        margin: 5px auto;
+        display: block;
+        font-weight: bold;
+      }
+      .btn-refresh-all {
+        background: #ff9800;
+      }
+      .btn-refresh-all:hover {
+        background: #e68900;
+      }
+      .btn-sync {
+        background: #6610f2;
+      }
+      .btn-sync:hover {
+        background: #520dc2;
+      }
+      .btn-toggle-off {
+        background: #17a2b8;
+      }
+      .btn-toggle-off:hover {
+        background: #117a8b;
+      }
+      .btn-toggle-on {
+        background: #28a745;
+      }
+
+      .status {
+        margin-top: 10px;
+        color: #aaa;
+        font-weight: bold;
+      }
+      .controls {
+        display: none;
+        margin-top: 30px;
+        border-top: 1px solid #555;
+        padding-top: 20px;
+      }
+      input {
+        display: none;
+      }
+
+      #guest-list {
+        margin-top: 20px;
+        text-align: left;
+        background: #222;
+        padding: 20px;
+        border-radius: 10px;
+      }
+      .guest-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #444;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        flex-wrap: wrap;
+      }
+      .guest-info {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+      }
+      .guest-name {
+        font-size: 1.2em;
+        font-weight: bold;
+      }
+      .guest-stats {
+        font-size: 0.75em;
+        color: #aaa;
+        margin-top: 4px;
+        font-family: monospace;
+      }
+
+      /* Styl przycisków akcji */
+      .guest-actions {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+      }
+      .btn-icon {
+        width: 35px;
+        height: 35px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+
+      /* Kolory przycisków */
+      .mic-on {
+        background: #28a745;
+      }
+      .mic-off {
+        background: #dc3545;
+      }
+      .btn-refresh {
+        background: #ff9800;
+      }
+      .btn-refresh:hover {
+        background: #e68900;
+      }
+      .btn-mirror {
+        background: #6c757d;
+      }
+      .btn-mirror:hover {
+        background: #5a6268;
+      }
+      .mirror-on {
+        background: #007bff;
+        border: 2px solid white;
+      }
+
+      /* Nowe przyciski kolejności */
+      .btn-move {
+        background: #343a40;
+        font-size: 14px;
+      }
+      .btn-move:hover {
+        background: #495057;
+      }
+
+      .stat-good {
+        color: #00ff00;
+      }
+      .stat-mid {
+        color: #ffcc00;
+      }
+      .stat-bad {
+        color: #ff4444;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Panel Reżysera</h1>
+      <div class="status" id="status-msg">Inicjalizacja...</div>
+      <input type="text" id="target-id" />
+
+      <div class="controls" id="control-panel">
+        <h2>🎥 Układ kamer:</h2>
+        <div
+          style="
+            margin-bottom: 15px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+          "
+        >
+          <button
+            class="btn-layout"
+            onclick="sendLayout('layout-grid')"
+            style="width: 90%; background: #6f42c1"
+          >
+            🔳 Pełna Siatka (Grid)
+          </button>
+        </div>
+        <div
+          style="
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+          "
+        >
+          <button class="btn-layout" onclick="sendLayout('layout-top')">
+            ⬆️ Góra
+          </button>
+          <button class="btn-layout" onclick="sendLayout('layout-bottom')">
+            ⬇️ Dół
+          </button>
+          <button
+            class="btn-layout"
+            onclick="sendLayout('layout-sidebar-left')"
+          >
+            ⬅️ Lewo
+          </button>
+          <button
+            class="btn-layout"
+            onclick="sendLayout('layout-sidebar-right')"
+          >
+            ➡️ Prawo
+          </button>
+        </div>
+        <div style="margin-top: 10px">
+          <button
+            class="btn-layout"
+            onclick="sendLayout('layout-split')"
+            style="width: 90%; background: #e83e8c"
+          >
+            ↔️ Obie Strony (Split)
+          </button>
+        </div>
+
+        <h2 style="margin-top: 30px">⚙️ Narzędzia:</h2>
+        <button
+          class="btn-tool btn-toggle-off"
+          id="btn-labels"
+          onclick="toggleLabels()"
+        >
+          🔤 Podpisy: UKRYTE
+        </button>
+        <button
+          class="btn-tool btn-toggle-off"
+          id="btn-icons"
+          onclick="toggleIcons()"
+        >
+          🔇 Ikony Mute: UKRYTE
+        </button>
+        <button
+          class="btn-tool btn-refresh-all"
+          onclick="refreshCam('all')"
+          style="margin-top: 20px"
+        >
+          🔄 Odśwież Bufory (Fix Lag)
+        </button>
+        <button class="btn-tool btn-sync" onclick="syncGuestsWithOBS()">
+          📡 Wymuś połączenie z nowym OBS
+        </button>
+
+        <h2>🎤 Zarządzanie Gośćmi:</h2>
+        <div id="guest-list">
+          <p style="text-align: center; color: #777">Oczekiwanie na gości...</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const useStunOnly = urlParams.get("stunonly");
+      const isMulti = urlParams.get("multi");
+      const roomID = urlParams.get("room");
+
+      const selectedConfig = useStunOnly
+        ? [{ urls: "stun:stun.l.google.com:19302" }]
+        : [
+            { urls: "stun:stun.l.google.com:19302" },
+            {
+              urls: "turn:openrelay.metered.ca:80?transport=udp",
+              username: "openrelayproject",
+              credential: "openrelayproject",
+            },
+            {
+              urls: "turn:openrelay.metered.ca:443?transport=tcp",
+              username: "openrelayproject",
+              credential: "openrelayproject",
+            },
+          ];
+
+      const peer = new Peer(isMulti ? roomID : undefined, {
+        config: { iceServers: selectedConfig },
+      });
+
+      let conn = null;
+      const obsClients = [];
+      const guestConnections = [];
+
+      // Stan
+      const multiGuestsState = {};
+      let guestOrder = []; // Tablica przechowująca kolejność ID gości
+
+      let labelsVisible = false;
+      let iconsVisible = false;
+
+      window.onload = function () {
+        if (!roomID) {
+          document.getElementById("status-msg").innerText =
+            "BŁĄD: Brak ID w linku.";
+          return;
+        }
+        document.getElementById("target-id").value = roomID;
+
+        if (isMulti) {
+          document.getElementById("status-msg").innerText =
+            "📡 Tryb Multi: SERWER AKTYWNY";
+          document.getElementById("control-panel").style.display = "block";
+          peer.on("connection", (connection) =>
+            handleIncomingConnection(connection)
+          );
+        } else {
+          document.getElementById("status-msg").innerText = "Szukam OBS...";
+          setTimeout(connectToOBS, 1000);
+        }
+      };
+
+      function connectToOBS() {
+        const targetId = document.getElementById("target-id").value;
+        conn = peer.connect(targetId);
+        conn.on("open", () => {
+          document.getElementById("status-msg").innerText =
+            "✅ POŁĄCZONO Z OBS (Standard)";
+          document.getElementById("status-msg").style.color = "#00ff00";
+          document.getElementById("control-panel").style.display = "block";
+          conn.send({ type: "director-hello" });
+        });
+        conn.on("data", (data) => handleData(data));
+        conn.on("error", (err) => alert("Błąd: " + err));
+      }
+
+      function handleIncomingConnection(connection) {
+        connection.on("open", () =>
+          console.log("Połączenie:", connection.peer)
+        );
+        connection.on("data", (data) => {
+          if (data.type === "register-obs") {
+            obsClients.push(connection);
+            updateStatusMsg();
+            connection.send({ type: "toggle-labels", show: labelsVisible });
+            connection.send({ type: "toggle-icons", show: iconsVisible });
+            connection.send({ type: "layout", mode: "layout-grid" });
+            // Wyślij aktualną kolejność do nowego OBS
+            if (guestOrder.length > 0)
+              connection.send({ type: "reorder-guests", order: guestOrder });
+          }
+          if (data.type === "get-obs-list") {
+            if (!guestConnections.includes(connection))
+              guestConnections.push(connection);
+            const obsIds = obsClients.map((c) => c.peer);
+            connection.send({ type: "obs-list", targets: obsIds });
+          }
+          handleData(data, connection);
+        });
+        connection.on("close", () => {
+          let idx = obsClients.indexOf(connection);
+          if (idx > -1) obsClients.splice(idx, 1);
+          idx = guestConnections.indexOf(connection);
+          if (idx > -1) guestConnections.splice(idx, 1);
+
+          // Usuń z listy gości i kolejności
+          if (multiGuestsState[connection.peer]) {
+            delete multiGuestsState[connection.peer];
+            guestOrder = guestOrder.filter((id) => id !== connection.peer);
+            refreshMultiModeUI();
+          }
+          updateStatusMsg();
+        });
+      }
+
+      function updateStatusMsg() {
+        document.getElementById(
+          "status-msg"
+        ).innerText = `✅ OBS: ${obsClients.length} | Gości: ${guestConnections.length}`;
+        document.getElementById("status-msg").style.color = "#00ff00";
+      }
+
+      function handleData(data, sourceConn) {
+        if (data.type === "guest-list" && !isMulti) {
+          // W trybie standard aktualizujemy naszą bazę na podstawie danych z OBS
+          // Ale musimy zachować naszą lokalną kolejność jeśli istnieje
+          data.list.forEach((g) => {
+            multiGuestsState[g.id] = g;
+            if (!guestOrder.includes(g.id)) guestOrder.push(g.id);
+          });
+          // Usuń tych co odeszli
+          const newIds = data.list.map((g) => g.id);
+          guestOrder = guestOrder.filter((id) => newIds.includes(id));
+
+          refreshMultiModeUI();
+        }
+
+        if (data.type === "stats-update") updateStats(data.stats);
+
+        if (isMulti) {
+          if (data.type === "identify" && sourceConn) {
+            if (!guestConnections.includes(sourceConn))
+              guestConnections.push(sourceConn);
+            multiGuestsState[sourceConn.peer] = {
+              id: sourceConn.peer,
+              name: data.name || "Gość",
+              muted: false,
+              mirrored: false,
+              conn: sourceConn,
+            };
+            // Dodaj do kolejności na koniec, jeśli nie ma
+            if (!guestOrder.includes(sourceConn.peer))
+              guestOrder.push(sourceConn.peer);
+
+            refreshMultiModeUI();
+            updateStatusMsg();
+          }
+          if (data.type === "mic-status" && sourceConn) {
+            if (multiGuestsState[sourceConn.peer]) {
+              multiGuestsState[sourceConn.peer].muted = data.muted;
+              refreshMultiModeUI();
+              obsClients.forEach((c) => {
+                if (c.open)
+                  c.send({
+                    type: "mic-status",
+                    peer: sourceConn.peer,
+                    muted: data.muted,
+                  });
+              });
+            }
+          }
+        }
+      }
+
+      function refreshMultiModeUI() {
+        // Sortujemy listę obiektów według tablicy guestOrder
+        const sortedList = [];
+        guestOrder.forEach((id) => {
+          if (multiGuestsState[id]) sortedList.push(multiGuestsState[id]);
+        });
+        renderGuestList(sortedList);
+      }
+
+      // --- FUNKCJE KOLEJNOŚCI ---
+      function moveGuest(id, direction) {
+        const index = guestOrder.indexOf(id);
+        if (index === -1) return;
+
+        if (direction === "up" && index > 0) {
+          // Swap z poprzednim
+          [guestOrder[index], guestOrder[index - 1]] = [
+            guestOrder[index - 1],
+            guestOrder[index],
+          ];
+        } else if (direction === "down" && index < guestOrder.length - 1) {
+          // Swap z następnym
+          [guestOrder[index], guestOrder[index + 1]] = [
+            guestOrder[index + 1],
+            guestOrder[index],
+          ];
+        } else {
+          return; // Nie da się przesunąć
+        }
+
+        refreshMultiModeUI(); // Odśwież lokalnie
+        broadcastCommand({ type: "reorder-guests", order: guestOrder }); // Wyślij do OBS
+      }
+
+      function broadcastCommand(cmd) {
+        if (isMulti)
+          obsClients.forEach((c) => {
+            if (c.open) c.send(cmd);
+          });
+        else if (conn && conn.open) conn.send(cmd);
+      }
+
+      function syncGuestsWithOBS() {
+        if (!isMulti) {
+          alert("Tylko Multi!");
+          return;
+        }
+        const btn = document.querySelector(".btn-sync");
+        btn.innerText = "⏳ Synchronizacja...";
+        guestConnections.forEach((g) => {
+          if (g.open) g.send({ type: "force-sync" });
+        });
+        setTimeout(() => {
+          btn.innerText = "📡 Wymuś połączenie z nowym OBS";
+        }, 1000);
+      }
+
+      function sendLayout(layoutName) {
+        broadcastCommand({ type: "layout", mode: layoutName });
+      }
+      function toggleGuestMic(id, currentMutedState) {
+        if (isMulti) {
+          const guest = multiGuestsState[id];
+          if (guest && guest.conn && guest.conn.open)
+            guest.conn.send({ type: "mute-cmd", state: !currentMutedState });
+        } else {
+          broadcastCommand({
+            type: "remote-mute",
+            targetId: id,
+            state: !currentMutedState,
+          });
+        }
+      }
+      function refreshCam(id) {
+        broadcastCommand({ type: "refresh-cam", targetId: id });
+      }
+      function toggleMirror(id) {
+        if (isMulti && multiGuestsState[id]) {
+          multiGuestsState[id].mirrored = !multiGuestsState[id].mirrored;
+          refreshMultiModeUI();
+        }
+        broadcastCommand({ type: "toggle-mirror", targetId: id });
+      }
+      function toggleLabels() {
+        labelsVisible = !labelsVisible;
+        broadcastCommand({ type: "toggle-labels", show: labelsVisible });
+        updateToolBtn("btn-labels", labelsVisible, "🔤 Podpisy");
+      }
+      function toggleIcons() {
+        iconsVisible = !iconsVisible;
+        broadcastCommand({ type: "toggle-icons", show: iconsVisible });
+        updateToolBtn("btn-icons", iconsVisible, "🔇 Ikony Mute");
+      }
+      function updateToolBtn(id, state, text) {
+        const btn = document.getElementById(id);
+        btn.innerText = state ? `${text}: WIDOCZNE` : `${text}: UKRYTE`;
+        btn.className = state
+          ? "btn-tool btn-toggle-on"
+          : "btn-tool btn-toggle-off";
+      }
+
+      function renderGuestList(list) {
+        const container = document.getElementById("guest-list");
+        container.innerHTML = "";
+        if (list.length === 0) {
+          container.innerHTML =
+            '<p style="text-align:center; color:#777;">Brak gości online.</p>';
+          return;
+        }
+
+        list.forEach((guest, index) => {
+          const item = document.createElement("div");
+          item.className = "guest-item";
+
+          const micClass = guest.muted ? "mic-off" : "mic-on";
+          const micIcon = guest.muted ? "🔇" : "🎤";
+          const statusText = guest.muted ? "(Wyciszony)" : "";
+          const mirrorClass = guest.mirrored ? "mirror-on" : "mirror-off";
+
+          // Logika przycisków góra/dół (ukryj jeśli nie da się przesunąć)
+          const upVisibility = index === 0 ? "visibility:hidden" : "";
+          const downVisibility =
+            index === list.length - 1 ? "visibility:hidden" : "";
+
+          item.innerHTML = `
+                    <div class="guest-actions" style="margin-right: 10px;">
+                        <button class="btn-icon btn-move" onclick="moveGuest('${guest.id}', 'up')" style="${upVisibility}">⬆️</button>
+                        <button class="btn-icon btn-move" onclick="moveGuest('${guest.id}', 'down')" style="${downVisibility}">⬇️</button>
+                    </div>
+                    <div class="guest-info">
+                        <span class="guest-name">${guest.name} <small style="font-weight:normal; font-size:0.7em">${statusText}</small></span>
+                        <span id="stats-${guest.id}" class="guest-stats">Czekam na dane...</span>
+                    </div>
+                    <div class="guest-actions">
+                        <button class="btn-icon ${mirrorClass}" onclick="toggleMirror('${guest.id}')" title="Lustrzane odbicie">🪞</button>
+                        <button class="btn-icon btn-refresh" onclick="refreshCam('${guest.id}')" title="Odśwież">🔄</button>
+                        <button class="btn-icon btn-mic ${micClass}" onclick="toggleGuestMic('${guest.id}', ${guest.muted})" title="Wycisz/Odcisz">
+                            ${micIcon}
+                        </button>
+                    </div>
+                `;
+          container.appendChild(item);
+        });
+      }
+
+      function updateStats(stats) {
+        for (const [id, data] of Object.entries(stats)) {
+          const el = document.getElementById(`stats-${id}`);
+          if (el) {
+            let colorClass = "stat-good";
+            if (data.bitrate < 1000 || data.packetLoss > 5)
+              colorClass = "stat-mid";
+            if (data.bitrate < 300 || data.packetLoss > 15)
+              colorClass = "stat-bad";
+            el.innerHTML = `
+                        Bitrate: <span class="${colorClass}">${data.bitrate} kbps</span> | 
+                        Loss: <span class="${colorClass}">${data.packetLoss}</span> | 
+                        Res: ${data.resolution}
+                    `;
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
