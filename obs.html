@@ -32,13 +32,18 @@
         transition: all 0.5s ease;
       }
 
-      video {
+      /* STYLE DLA WIDEO I OBRAZKÓW (Sztucznych gości) */
+      video,
+      img.fake-cam {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
       }
-      video.mirror-effect {
+
+      /* Lustro działa też na sztucznych gości */
+      video.mirror-effect,
+      img.mirror-effect {
         transform: scaleX(-1);
       }
 
@@ -179,7 +184,6 @@
         margin: 0 10px;
       }
 
-      /* SPLIT - Naprawiony */
       .layout-split {
         display: grid;
         grid-template-columns: 320px 1fr 320px;
@@ -204,7 +208,6 @@
         justify-self: end;
       }
 
-      /* CENTER STAGE */
       .layout-center-stage {
         display: grid;
         grid-template-columns: 300px 1fr 300px;
@@ -363,19 +366,18 @@
           else container.classList.remove("show-icons");
         }
 
-        // --- POPRAWKA: FIZYCZNA ZMIANA KOLEJNOŚCI DOM ---
         if (data.type === "reorder-guests") {
           const orderList = data.order;
-          orderList.forEach((id) => {
+          orderList.forEach((id, index) => {
             const box = document.getElementById(`box-${id}`);
-            if (box) {
-              // appendChild przenosi istniejący element na koniec
-              // Dzięki pętli forEach ułożymy je w kolejności z tablicy
-              container.appendChild(box);
-            }
+            if (box) container.appendChild(box);
           });
         }
-        // ------------------------------------------------
+
+        // DODAWANIE SZTUCZNEGO GOŚCIA
+        if (data.type === "add-fake-guest") {
+          addFakeVideo(data.id, data.name, data.img);
+        }
 
         if (data.type === "refresh-cam") {
           if (data.targetId === "all")
@@ -387,7 +389,8 @@
           const id = data.targetId;
           const box = document.getElementById(`box-${id}`);
           if (box) {
-            const video = box.querySelector("video");
+            const video =
+              box.querySelector("video") || box.querySelector("img");
             if (video) {
               video.classList.toggle("mirror-effect");
               if (guests[id])
@@ -397,14 +400,29 @@
           }
         }
 
+        // Sztuczne Mute (tylko aktualizacja UI)
+        if (data.type === "mute-cmd") {
+          // Jeśli to fake, zaktualizujmy stan dla spójności
+          if (data.state !== undefined && guests[conn?.peer]) {
+            // To działa tylko dla prawdziwych gości w tym miejscu
+          }
+        }
+
         if (data.type === "remote-mute") {
-          if (guests[data.targetId] && guests[data.targetId].conn) {
+          // To jest komenda od Reżysera DO Gościa
+          // Jeśli to fake guest, symulujemy zmianę u nas
+          if (data.targetId.startsWith("fake-") && guests[data.targetId]) {
+            guests[data.targetId].muted = data.state;
+            toggleMuteIcon(data.targetId, data.state);
+            sendGuestListToDirector();
+          } else if (guests[data.targetId] && guests[data.targetId].conn) {
             guests[data.targetId].conn.send({
               type: "mute-cmd",
               state: data.state,
             });
           }
         }
+
         if (data.type === "identify" && conn) {
           if (!guests[conn.peer])
             guests[conn.peer] = { name: "Gość", muted: false, mirrored: false };
@@ -430,6 +448,46 @@
         container.setAttribute("data-count", count);
       }
 
+      // --- FUNKCJA DLA SZTUCZNEGO GOŚCIA ---
+      function addFakeVideo(id, name, imgSrc) {
+        if (document.getElementById(`box-${id}`)) return;
+
+        // Rejestrujemy w bazie (bez obiektu conn)
+        guests[id] = { name: name, muted: false, mirrored: false, conn: null };
+
+        // Nie ustawiamy heartbeatu (bo zaraz by zniknął),
+        // ale musimy uważać na pętlę czyszczącą.
+        // W pętli setInterval dodamy wyjątek dla id zaczynających się od 'fake-'
+
+        const box = document.createElement("div");
+        box.className = "video-box";
+        box.id = `box-${id}`;
+        box.style.order = 999;
+
+        // Zamiast wideo, dajemy obrazek
+        const img = document.createElement("img");
+        img.src = imgSrc;
+        img.className = "fake-cam"; // Nowa klasa w CSS
+
+        const label = document.createElement("div");
+        label.className = "label";
+        label.id = `label-${id}`;
+        label.innerText = name;
+
+        const muteIcon = document.createElement("div");
+        muteIcon.className = "mute-icon";
+        muteIcon.innerText = "🔇";
+        muteIcon.id = `mute-${id}`;
+
+        box.appendChild(img);
+        box.appendChild(label);
+        box.appendChild(muteIcon);
+        container.appendChild(box);
+
+        updateGuestCount();
+        sendGuestListToDirector();
+      }
+
       function addVideo(stream, id) {
         if (document.getElementById(`box-${id}`)) return;
         heartbeats[id] = Date.now();
@@ -438,7 +496,7 @@
         const box = document.createElement("div");
         box.className = "video-box";
         box.id = `box-${id}`;
-        // Usunięto style.order, bo teraz polegamy na DOM
+        box.style.order = 999;
 
         const video = document.createElement("video");
         video.srcObject = stream;
@@ -488,6 +546,9 @@
         const now = Date.now();
         const statsReport = {};
         for (const peerId in guests) {
+          // Wyjątek dla fake gości - nie usuwaj ich przez brak pulsu
+          if (peerId.startsWith("fake-")) continue;
+
           if (heartbeats[peerId] && now - heartbeats[peerId] > 7000) {
             removeGuest(peerId);
             continue;

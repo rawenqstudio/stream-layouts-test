@@ -24,7 +24,6 @@
         color: white;
         transition: 0.2s;
       }
-
       .btn-layout {
         background: #007bff;
         width: 45%;
@@ -35,7 +34,6 @@
       .btn-layout:hover {
         background: #0056b3;
       }
-
       .btn-tool {
         width: 93%;
         padding: 10px;
@@ -55,7 +53,6 @@
       .btn-sync:hover {
         background: #520dc2;
       }
-
       .btn-toggle-off {
         background: #17a2b8;
       }
@@ -123,23 +120,19 @@
         color: #ff4444;
         font-weight: bold;
       }
-
       .guest-actions {
         display: flex;
         gap: 5px;
-        align-items: center;
       }
       .btn-icon {
-        width: 35px;
-        height: 35px;
+        width: 40px;
+        height: 40px;
         padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 20px;
       }
-
-      /* Kolory przycisków */
       .mic-on {
         background: #28a745;
       }
@@ -162,7 +155,6 @@
         background: #007bff;
         border: 2px solid white;
       }
-
       .btn-move {
         background: #343a40;
         font-size: 14px;
@@ -180,8 +172,6 @@
 
       <div class="controls" id="control-panel">
         <h2>🎥 Układ kamer:</h2>
-
-        <!-- GRID (Pełna szerokość) -->
         <div
           style="
             margin-bottom: 15px;
@@ -197,8 +187,6 @@
             🔳 Pełna Siatka (Grid)
           </button>
         </div>
-
-        <!-- Układy standardowe (2x2) -->
         <div
           style="
             display: flex;
@@ -226,8 +214,6 @@
             ➡️ Prawo
           </button>
         </div>
-
-        <!-- SPLIT (Pełna szerokość) -->
         <div style="margin-top: 10px">
           <button
             class="btn-layout"
@@ -237,8 +223,6 @@
             ↔️ Obie Strony (Split)
           </button>
         </div>
-
-        <!-- CENTER STAGE (Pełna szerokość - Pod spodem) -->
         <div style="margin-top: 5px">
           <button
             class="btn-layout"
@@ -269,7 +253,7 @@
           onclick="refreshCam('all')"
           style="margin-top: 20px"
         >
-          🔄 Odśwież Bufory (Fix Lag)
+          🔄 Odśwież Wszystkie bufory (Fix Lag)
         </button>
         <button class="btn-tool btn-sync" onclick="syncGuestsWithOBS()">
           📡 Wymuś połączenie z nowym OBS
@@ -279,6 +263,9 @@
         <div id="guest-list">
           <p style="text-align: center; color: #777">Oczekiwanie na gości...</p>
         </div>
+        <p style="color: #555; font-size: 0.8em; margin-top: 20px">
+          Easter Egg: Ctrl + Shift + F
+        </p>
       </div>
     </div>
 
@@ -339,6 +326,53 @@
         }
       };
 
+      // --- EASTER EGG ---
+      document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey && e.shiftKey && (e.key === "F" || e.key === "f")) {
+          addFakeGuest();
+        }
+      });
+
+      function addFakeGuest() {
+        const fakeId = "fake-" + Math.floor(Math.random() * 10000);
+        const fakeNames = [
+          "Sztuczny Jan",
+          "Testowa Anna",
+          "Bot Marek",
+          "Demo Zosia",
+          "Pixel Kot",
+          "Auto Pies",
+        ];
+        const randomName =
+          fakeNames[Math.floor(Math.random() * fakeNames.length)];
+        const randomImg = `https://picsum.photos/seed/${fakeId}/640/360`;
+
+        console.log("Dodaję sztucznego gościa:", fakeId);
+
+        // 1. Wysyłamy komendę do OBS
+        broadcastCommand({
+          type: "add-fake-guest",
+          id: fakeId,
+          name: randomName,
+          img: randomImg,
+        });
+
+        // 2. AKTUALIZUJEMY STAN LOKALNY (Tego brakowało!)
+        // Dzięki temu gość pojawi się na liście w Reżyserce
+        multiGuestsState[fakeId] = {
+          id: fakeId,
+          name: randomName,
+          muted: false,
+          mirrored: false,
+          conn: null, // Brak prawdziwego połączenia
+        };
+
+        if (!guestOrder.includes(fakeId)) guestOrder.push(fakeId);
+
+        // 3. Odświeżamy widok
+        refreshMultiModeUI();
+      }
+
       function connectToOBS() {
         const targetId = document.getElementById("target-id").value;
         conn = peer.connect(targetId);
@@ -380,7 +414,6 @@
           if (idx > -1) obsClients.splice(idx, 1);
           idx = guestConnections.indexOf(connection);
           if (idx > -1) guestConnections.splice(idx, 1);
-
           if (multiGuestsState[connection.peer]) {
             delete multiGuestsState[connection.peer];
             guestOrder = guestOrder.filter((id) => id !== connection.peer);
@@ -407,9 +440,7 @@
           guestOrder = guestOrder.filter((id) => newIds.includes(id));
           refreshMultiModeUI();
         }
-
         if (data.type === "stats-update") updateStats(data.stats);
-
         if (isMulti) {
           if (data.type === "identify" && sourceConn) {
             if (!guestConnections.includes(sourceConn))
@@ -454,7 +485,6 @@
       function moveGuest(id, direction) {
         const index = guestOrder.indexOf(id);
         if (index === -1) return;
-
         if (direction === "up" && index > 0) {
           [guestOrder[index], guestOrder[index - 1]] = [
             guestOrder[index - 1],
@@ -468,7 +498,6 @@
         } else {
           return;
         }
-
         refreshMultiModeUI();
         broadcastCommand({ type: "reorder-guests", order: guestOrder });
       }
@@ -499,11 +528,27 @@
       function sendLayout(layoutName) {
         broadcastCommand({ type: "layout", mode: layoutName });
       }
+
       function toggleGuestMic(id, currentMutedState) {
         if (isMulti) {
           const guest = multiGuestsState[id];
-          if (guest && guest.conn && guest.conn.open)
+
+          // Obsługa FAKE GUEST (Symulacja zmiany stanu)
+          if (id.startsWith("fake-")) {
+            guest.muted = !currentMutedState;
+            refreshMultiModeUI();
+            broadcastCommand({
+              type: "remote-mute",
+              targetId: id,
+              state: guest.muted,
+            }); // Wyślij do OBS, żeby zmienił ikonkę
+            return;
+          }
+
+          // Obsługa PRAWDZIWEGO GOŚCIA
+          if (guest && guest.conn && guest.conn.open) {
             guest.conn.send({ type: "mute-cmd", state: !currentMutedState });
+          }
         } else {
           broadcastCommand({
             type: "remote-mute",
@@ -512,6 +557,7 @@
           });
         }
       }
+
       function refreshCam(id) {
         broadcastCommand({ type: "refresh-cam", targetId: id });
       }
@@ -566,17 +612,35 @@
 
           item.innerHTML = `
                     <div class="guest-actions" style="margin-right: 10px;">
-                        <button class="btn-icon btn-move" onclick="moveGuest('${guest.id}', 'up')" style="${upVisibility}">⬆️</button>
-                        <button class="btn-icon btn-move" onclick="moveGuest('${guest.id}', 'down')" style="${downVisibility}">⬇️</button>
+                        <button class="btn-icon btn-move" onclick="moveGuest('${
+                          guest.id
+                        }', 'up')" style="${upVisibility}">⬆️</button>
+                        <button class="btn-icon btn-move" onclick="moveGuest('${
+                          guest.id
+                        }', 'down')" style="${downVisibility}">⬇️</button>
                     </div>
                     <div class="guest-info">
-                        <span class="guest-name">${guest.name} <small style="font-weight:normal; font-size:0.7em">${statusText}</small></span>
-                        <span id="stats-${guest.id}" class="guest-stats">Czekam na dane...</span>
+                        <span class="guest-name">${
+                          guest.name
+                        } <small style="font-weight:normal; font-size:0.7em">${statusText}</small></span>
+                        <span id="stats-${guest.id}" class="guest-stats">
+                            ${
+                              guest.id.startsWith("fake-")
+                                ? "SZTUCZNY GOŚĆ"
+                                : "Czekam na dane..."
+                            }
+                        </span>
                     </div>
                     <div class="guest-actions">
-                        <button class="btn-icon ${mirrorClass}" onclick="toggleMirror('${guest.id}')" title="Lustrzane odbicie">🪞</button>
-                        <button class="btn-icon btn-refresh" onclick="refreshCam('${guest.id}')" title="Odśwież">🔄</button>
-                        <button class="btn-icon btn-mic ${micClass}" onclick="toggleGuestMic('${guest.id}', ${guest.muted})" title="Wycisz/Odcisz">
+                        <button class="btn-icon ${mirrorClass}" onclick="toggleMirror('${
+            guest.id
+          }')" title="Lustrzane odbicie">🪞</button>
+                        <button class="btn-icon btn-refresh" onclick="refreshCam('${
+                          guest.id
+                        }')" title="Odśwież">🔄</button>
+                        <button class="btn-icon btn-mic ${micClass}" onclick="toggleGuestMic('${
+            guest.id
+          }', ${guest.muted})" title="Wycisz/Odcisz">
                             ${micIcon}
                         </button>
                     </div>
