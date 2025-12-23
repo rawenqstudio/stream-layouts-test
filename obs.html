@@ -77,7 +77,7 @@
         display: none !important;
       }
 
-      /* UKŁAD GRID (Auto) */
+      /* UKŁADY */
       .layout-grid {
         display: flex;
         flex-wrap: wrap;
@@ -122,7 +122,6 @@
         height: 23%;
       }
 
-      /* Paski Boczne/Góra/Dół */
       .layout-sidebar-right {
         display: flex;
         flex-direction: column;
@@ -180,7 +179,7 @@
         margin: 0 10px;
       }
 
-      /* UKŁAD SPLIT (POPRAWIONY) */
+      /* SPLIT - Naprawiony */
       .layout-split {
         display: grid;
         grid-template-columns: 320px 1fr 320px;
@@ -205,48 +204,36 @@
         justify-self: end;
       }
 
-      /* --- NOWY UKŁAD: CENTER STAGE (Środek + Boki) --- */
+      /* CENTER STAGE */
       .layout-center-stage {
         display: grid;
-        /* Kolumny: Lewa (mała), Środek (auto - reszta), Prawa (mała) */
         grid-template-columns: 300px 1fr 300px;
-        /* Wiersze dopasowane do zawartości */
         grid-auto-rows: min-content;
         gap: 15px;
         padding: 20px;
         height: 100vh;
         box-sizing: border-box;
-        align-content: center; /* Wyśrodkowanie w pionie */
+        align-content: center;
       }
-
-      /* Domyślny styl dla małych okienek (bocznych) */
       .layout-center-stage .video-box {
         width: 100%;
-        height: 169px; /* Mały format 16:9 */
+        height: 169px;
         margin: 0;
       }
-
-      /* --- LOGIKA ROZMIESZCZENIA --- */
-
-      /* 1. KRÓL (Pierwszy na liście) -> ŚRODEK */
       .layout-center-stage .video-box:nth-child(1) {
-        grid-column: 2; /* Środkowa kolumna */
-        grid-row: 1 / span 10; /* Rozciągnij na wysokość wielu rzędów bocznych */
+        grid-column: 2;
+        grid-row: 1 / span 10;
         width: 100%;
-        height: auto; /* Wysokość automatyczna */
-        max-height: 90vh; /* Żeby nie wyszedł poza ekran */
-        aspect-ratio: 16/9; /* Zachowaj proporcje */
-        align-self: center; /* Wyśrodkuj w swojej komórce */
+        height: auto;
+        max-height: 90vh;
+        aspect-ratio: 16/9;
+        align-self: center;
         z-index: 10;
-        box-shadow: 0 0 30px rgba(0, 0, 0, 0.8); /* Większy cień dla wyróżnienia */
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
       }
-
-      /* 2. PARZYŚCI (2, 4, 6...) -> LEWA STRONA */
       .layout-center-stage .video-box:nth-child(even) {
         grid-column: 1;
       }
-
-      /* 3. NIEPARZYŚCI (3, 5, 7... ale BEZ PIERWSZEGO) -> PRAWA STRONA */
       .layout-center-stage .video-box:nth-child(odd):not(:first-child) {
         grid-column: 3;
       }
@@ -376,13 +363,19 @@
           else container.classList.remove("show-icons");
         }
 
+        // --- POPRAWKA: FIZYCZNA ZMIANA KOLEJNOŚCI DOM ---
         if (data.type === "reorder-guests") {
           const orderList = data.order;
-          orderList.forEach((id, index) => {
+          orderList.forEach((id) => {
             const box = document.getElementById(`box-${id}`);
-            if (box) box.style.order = index;
+            if (box) {
+              // appendChild przenosi istniejący element na koniec
+              // Dzięki pętli forEach ułożymy je w kolejności z tablicy
+              container.appendChild(box);
+            }
           });
         }
+        // ------------------------------------------------
 
         if (data.type === "refresh-cam") {
           if (data.targetId === "all")
@@ -445,7 +438,7 @@
         const box = document.createElement("div");
         box.className = "video-box";
         box.id = `box-${id}`;
-        box.style.order = 999;
+        // Usunięto style.order, bo teraz polegamy na DOM
 
         const video = document.createElement("video");
         video.srcObject = stream;
