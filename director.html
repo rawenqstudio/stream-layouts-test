@@ -24,6 +24,7 @@
         color: white;
         transition: 0.2s;
       }
+
       .btn-layout {
         background: #007bff;
         width: 45%;
@@ -34,6 +35,7 @@
       .btn-layout:hover {
         background: #0056b3;
       }
+
       .btn-tool {
         width: 93%;
         padding: 10px;
@@ -53,6 +55,7 @@
       .btn-sync:hover {
         background: #520dc2;
       }
+
       .btn-toggle-off {
         background: #17a2b8;
       }
@@ -110,8 +113,17 @@
         margin-top: 4px;
         font-family: monospace;
       }
+      .stat-good {
+        color: #00ff00;
+      }
+      .stat-mid {
+        color: #ffcc00;
+      }
+      .stat-bad {
+        color: #ff4444;
+        font-weight: bold;
+      }
 
-      /* Styl przycisków akcji */
       .guest-actions {
         display: flex;
         gap: 5px;
@@ -151,24 +163,12 @@
         border: 2px solid white;
       }
 
-      /* Nowe przyciski kolejności */
       .btn-move {
         background: #343a40;
         font-size: 14px;
       }
       .btn-move:hover {
         background: #495057;
-      }
-
-      .stat-good {
-        color: #00ff00;
-      }
-      .stat-mid {
-        color: #ffcc00;
-      }
-      .stat-bad {
-        color: #ff4444;
-        font-weight: bold;
       }
     </style>
   </head>
@@ -180,6 +180,8 @@
 
       <div class="controls" id="control-panel">
         <h2>🎥 Układ kamer:</h2>
+
+        <!-- GRID (Pełna szerokość) -->
         <div
           style="
             margin-bottom: 15px;
@@ -195,6 +197,8 @@
             🔳 Pełna Siatka (Grid)
           </button>
         </div>
+
+        <!-- Układy standardowe (2x2) -->
         <div
           style="
             display: flex;
@@ -222,18 +226,24 @@
             ➡️ Prawo
           </button>
         </div>
-        <div style="margin-top: 10px; display: flex; gap: 5px">
+
+        <!-- SPLIT (Pełna szerokość) -->
+        <div style="margin-top: 10px">
           <button
             class="btn-layout"
             onclick="sendLayout('layout-split')"
-            style="background: #e83e8c"
+            style="width: 90%; background: #e83e8c"
           >
-            ↔️ Split (Boki)
+            ↔️ Obie Strony (Split)
           </button>
+        </div>
+
+        <!-- CENTER STAGE (Pełna szerokość - Pod spodem) -->
+        <div style="margin-top: 5px">
           <button
             class="btn-layout"
             onclick="sendLayout('layout-center-stage')"
-            style="background: #6610f2"
+            style="width: 90%; background: #6610f2"
           >
             ⭐️ Center Stage
           </button>
@@ -302,9 +312,8 @@
       const obsClients = [];
       const guestConnections = [];
 
-      // Stan
       const multiGuestsState = {};
-      let guestOrder = []; // Tablica przechowująca kolejność ID gości
+      let guestOrder = [];
 
       let labelsVisible = false;
       let iconsVisible = false;
@@ -355,7 +364,6 @@
             connection.send({ type: "toggle-labels", show: labelsVisible });
             connection.send({ type: "toggle-icons", show: iconsVisible });
             connection.send({ type: "layout", mode: "layout-grid" });
-            // Wyślij aktualną kolejność do nowego OBS
             if (guestOrder.length > 0)
               connection.send({ type: "reorder-guests", order: guestOrder });
           }
@@ -373,7 +381,6 @@
           idx = guestConnections.indexOf(connection);
           if (idx > -1) guestConnections.splice(idx, 1);
 
-          // Usuń z listy gości i kolejności
           if (multiGuestsState[connection.peer]) {
             delete multiGuestsState[connection.peer];
             guestOrder = guestOrder.filter((id) => id !== connection.peer);
@@ -392,16 +399,12 @@
 
       function handleData(data, sourceConn) {
         if (data.type === "guest-list" && !isMulti) {
-          // W trybie standard aktualizujemy naszą bazę na podstawie danych z OBS
-          // Ale musimy zachować naszą lokalną kolejność jeśli istnieje
           data.list.forEach((g) => {
             multiGuestsState[g.id] = g;
             if (!guestOrder.includes(g.id)) guestOrder.push(g.id);
           });
-          // Usuń tych co odeszli
           const newIds = data.list.map((g) => g.id);
           guestOrder = guestOrder.filter((id) => newIds.includes(id));
-
           refreshMultiModeUI();
         }
 
@@ -418,10 +421,8 @@
               mirrored: false,
               conn: sourceConn,
             };
-            // Dodaj do kolejności na koniec, jeśli nie ma
             if (!guestOrder.includes(sourceConn.peer))
               guestOrder.push(sourceConn.peer);
-
             refreshMultiModeUI();
             updateStatusMsg();
           }
@@ -443,7 +444,6 @@
       }
 
       function refreshMultiModeUI() {
-        // Sortujemy listę obiektów według tablicy guestOrder
         const sortedList = [];
         guestOrder.forEach((id) => {
           if (multiGuestsState[id]) sortedList.push(multiGuestsState[id]);
@@ -451,29 +451,26 @@
         renderGuestList(sortedList);
       }
 
-      // --- FUNKCJE KOLEJNOŚCI ---
       function moveGuest(id, direction) {
         const index = guestOrder.indexOf(id);
         if (index === -1) return;
 
         if (direction === "up" && index > 0) {
-          // Swap z poprzednim
           [guestOrder[index], guestOrder[index - 1]] = [
             guestOrder[index - 1],
             guestOrder[index],
           ];
         } else if (direction === "down" && index < guestOrder.length - 1) {
-          // Swap z następnym
           [guestOrder[index], guestOrder[index + 1]] = [
             guestOrder[index + 1],
             guestOrder[index],
           ];
         } else {
-          return; // Nie da się przesunąć
+          return;
         }
 
-        refreshMultiModeUI(); // Odśwież lokalnie
-        broadcastCommand({ type: "reorder-guests", order: guestOrder }); // Wyślij do OBS
+        refreshMultiModeUI();
+        broadcastCommand({ type: "reorder-guests", order: guestOrder });
       }
 
       function broadcastCommand(cmd) {
@@ -518,6 +515,7 @@
       function refreshCam(id) {
         broadcastCommand({ type: "refresh-cam", targetId: id });
       }
+
       function toggleMirror(id) {
         if (isMulti && multiGuestsState[id]) {
           multiGuestsState[id].mirrored = !multiGuestsState[id].mirrored;
@@ -525,6 +523,7 @@
         }
         broadcastCommand({ type: "toggle-mirror", targetId: id });
       }
+
       function toggleLabels() {
         labelsVisible = !labelsVisible;
         broadcastCommand({ type: "toggle-labels", show: labelsVisible });
@@ -561,7 +560,6 @@
           const statusText = guest.muted ? "(Wyciszony)" : "";
           const mirrorClass = guest.mirrored ? "mirror-on" : "mirror-off";
 
-          // Logika przycisków góra/dół (ukryj jeśli nie da się przesunąć)
           const upVisibility = index === 0 ? "visibility:hidden" : "";
           const downVisibility =
             index === list.length - 1 ? "visibility:hidden" : "";
