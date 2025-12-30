@@ -32,7 +32,7 @@
         transition: all 0.5s ease;
       }
 
-      /* STYLE DLA WIDEO I OBRAZKÓW (Sztucznych gości) */
+      /* STYLE DLA WIDEO I OBRAZKÓW */
       video,
       img.fake-cam {
         width: 100%;
@@ -40,8 +40,6 @@
         object-fit: cover;
         display: block;
       }
-
-      /* Lustro działa też na sztucznych gości */
       video.mirror-effect,
       img.mirror-effect {
         transform: scaleX(-1);
@@ -286,6 +284,8 @@
       const guests = {};
       const heartbeats = {};
       let directorConn = null;
+
+      // Pamięć podręczna dla statystyk i auto-catchup
       const statsCache = {};
 
       peer.on("open", (id) => {
@@ -356,7 +356,6 @@
 
       function handleData(data, conn) {
         if (data.type === "layout") container.className = data.mode;
-
         if (data.type === "toggle-labels") {
           if (data.show) container.classList.add("show-labels");
           else container.classList.remove("show-labels");
@@ -365,64 +364,41 @@
           if (data.show) container.classList.add("show-icons");
           else container.classList.remove("show-icons");
         }
-
         if (data.type === "reorder-guests") {
-          const orderList = data.order;
-          orderList.forEach((id, index) => {
+          data.order.forEach((id) => {
             const box = document.getElementById(`box-${id}`);
             if (box) container.appendChild(box);
           });
         }
-
-        // DODAWANIE SZTUCZNEGO GOŚCIA
-        if (data.type === "add-fake-guest") {
+        if (data.type === "add-fake-guest")
           addFakeVideo(data.id, data.name, data.img);
-        }
-
         if (data.type === "refresh-cam") {
           if (data.targetId === "all")
             Object.keys(guests).forEach((id) => performRefresh(id));
           else performRefresh(data.targetId);
         }
-
         if (data.type === "toggle-mirror") {
-          const id = data.targetId;
-          const box = document.getElementById(`box-${id}`);
+          const box = document.getElementById(`box-${data.targetId}`);
           if (box) {
             const video =
               box.querySelector("video") || box.querySelector("img");
             if (video) {
               video.classList.toggle("mirror-effect");
-              if (guests[id])
-                guests[id].mirrored = video.classList.contains("mirror-effect");
+              if (guests[data.targetId])
+                guests[data.targetId].mirrored =
+                  video.classList.contains("mirror-effect");
               sendGuestListToDirector();
             }
           }
         }
-
-        // Sztuczne Mute (tylko aktualizacja UI)
-        if (data.type === "mute-cmd") {
-          // Jeśli to fake, zaktualizujmy stan dla spójności
-          if (data.state !== undefined && guests[conn?.peer]) {
-            // To działa tylko dla prawdziwych gości w tym miejscu
-          }
-        }
-
         if (data.type === "remote-mute") {
-          // To jest komenda od Reżysera DO Gościa
-          // Jeśli to fake guest, symulujemy zmianę u nas
-          if (data.targetId.startsWith("fake-") && guests[data.targetId]) {
-            guests[data.targetId].muted = data.state;
-            toggleMuteIcon(data.targetId, data.state);
-            sendGuestListToDirector();
-          } else if (guests[data.targetId] && guests[data.targetId].conn) {
+          if (guests[data.targetId] && guests[data.targetId].conn) {
             guests[data.targetId].conn.send({
               type: "mute-cmd",
               state: data.state,
             });
           }
         }
-
         if (data.type === "identify" && conn) {
           if (!guests[conn.peer])
             guests[conn.peer] = { name: "Gość", muted: false, mirrored: false };
@@ -448,26 +424,133 @@
         container.setAttribute("data-count", count);
       }
 
-      // --- FUNKCJA DLA SZTUCZNEGO GOŚCIA ---
+      // --- 3. HEARTBEAT & STATYSTYKI & AUTO-CATCHUP ---
+      setInterval(async () => {
+        const now = Date.now();
+        const statsReport = {};
+
+        for (const peerId in guests) {
+          if (peerId.startsWith("fake-")) continue;
+
+          if (heartbeats[peerId] && now - heartbeats[peerId] > 7000) {
+            removeGuest(peerId);
+            continue;
+          }
+
+          const guest = guests[peerId];
+          if (guest.call && guest.call.peerConnection) {
+            try {
+              const stats = await guest.call.peerConnection.getStats();
+              let videoStats = null;
+
+              stats.forEach((report) => {
+                if (report.type === "inbound-rtp" && report.kind === "video")
+                  videoStats = report;
+              });
+
+              if (videoStats) {
+                // 1. Bitrate
+                const bytes = videoStats.bytesReceived;
+                const prevBytes = statsCache[peerId]?.bytes || 0;
+                const bitrate = ((bytes - prevBytes) * 8) / 1000;
+
+                // 2. Opóźnienie (Jitter Buffer Logic)
+                // Obliczamy ile sekund wideo "leży" w buforze
+                const jitterBufferDelay = videoStats.jitterBufferDelay || 0;
+                const jitterBufferEmitted =
+                  videoStats.jitterBufferEmittedCount || 1;
+
+                const prevDelayTotal = statsCache[peerId]?.delayTotal || 0;
+                const prevEmittedTotal = statsCache[peerId]?.emittedTotal || 0;
+
+                // Delta (przyrost w ciągu ostatniej sekundy)
+                const deltaDelay = jitterBufferDelay - prevDelayTotal;
+                const deltaEmitted = jitterBufferEmitted - prevEmittedTotal;
+
+                // Średnie opóźnienie w tej sekundzie
+                let currentLatency = 0;
+                if (deltaEmitted > 0)
+                  currentLatency = deltaDelay / deltaEmitted;
+
+                // --- AUTO-CATCHUP LOGIC (To jest ta nowość!) ---
+                const box = document.getElementById(`box-${peerId}`);
+                if (box) {
+                  const video = box.querySelector("video");
+                  if (video && !video.paused) {
+                    // A. Jeśli opóźnienie > 200ms -> Przyspiesz (1.05x)
+                    if (currentLatency > 0.2) {
+                      if (video.playbackRate !== 1.05) {
+                        video.playbackRate = 1.05;
+                        console.log(
+                          `🐢 Lag wykryty (${currentLatency.toFixed(
+                            3
+                          )}s). Przyspieszam wideo: ${peerId}`
+                        );
+                      }
+                    }
+                    // B. Jeśli opóźnienie < 150ms -> Wróć do normy (1.0x)
+                    else if (currentLatency < 0.15) {
+                      if (video.playbackRate !== 1.0) {
+                        video.playbackRate = 1.0;
+                        console.log(
+                          `✅ Lag naprawiony. Wracam do normalnej prędkości: ${peerId}`
+                        );
+                      }
+                    }
+
+                    // C. Jeśli opóźnienie > 2s (Krytyczne) -> Twardy reset
+                    if (currentLatency > 2.0) {
+                      console.warn(
+                        `🚨 KRYTYCZNY LAG (${currentLatency.toFixed(
+                          3
+                        )}s). Wykonuję twardy reset: ${peerId}`
+                      );
+                      performRefresh(peerId);
+                    }
+                  }
+                }
+                // ---------------------------------------------
+
+                // Zapisz do cache na następną rundę
+                statsCache[peerId] = {
+                  bytes: bytes,
+                  delayTotal: jitterBufferDelay,
+                  emittedTotal: jitterBufferEmitted,
+                };
+
+                statsReport[peerId] = {
+                  bitrate: Math.round(bitrate),
+                  packetLoss: videoStats.packetsLost || 0,
+                  resolution:
+                    videoStats.frameWidth && videoStats.frameHeight
+                      ? `${videoStats.frameWidth}x${videoStats.frameHeight}`
+                      : "N/A",
+                };
+              }
+            } catch (e) {}
+          }
+        }
+        if (
+          directorConn &&
+          directorConn.open &&
+          Object.keys(statsReport).length > 0
+        ) {
+          directorConn.send({ type: "stats-update", stats: statsReport });
+        }
+      }, 1000);
+
       function addFakeVideo(id, name, imgSrc) {
         if (document.getElementById(`box-${id}`)) return;
-
-        // Rejestrujemy w bazie (bez obiektu conn)
         guests[id] = { name: name, muted: false, mirrored: false, conn: null };
-
-        // Nie ustawiamy heartbeatu (bo zaraz by zniknął),
-        // ale musimy uważać na pętlę czyszczącą.
-        // W pętli setInterval dodamy wyjątek dla id zaczynających się od 'fake-'
 
         const box = document.createElement("div");
         box.className = "video-box";
         box.id = `box-${id}`;
         box.style.order = 999;
 
-        // Zamiast wideo, dajemy obrazek
         const img = document.createElement("img");
         img.src = imgSrc;
-        img.className = "fake-cam"; // Nowa klasa w CSS
+        img.className = "fake-cam";
 
         const label = document.createElement("div");
         label.className = "label";
@@ -491,7 +574,8 @@
       function addVideo(stream, id) {
         if (document.getElementById(`box-${id}`)) return;
         heartbeats[id] = Date.now();
-        statsCache[id] = 0;
+        // Inicjalizacja cache dla Auto-Catchup
+        statsCache[id] = { bytes: 0, delayTotal: 0, emittedTotal: 0 };
 
         const box = document.createElement("div");
         box.className = "video-box";
@@ -531,63 +615,6 @@
         audio.play().catch((e) => console.warn(e));
       }
 
-      function removeGuest(id) {
-        if (document.getElementById(`box-${id}`)) {
-          document.getElementById(`box-${id}`).remove();
-          delete guests[id];
-          delete heartbeats[id];
-          delete statsCache[id];
-          updateGuestCount();
-          sendGuestListToDirector();
-        }
-      }
-
-      setInterval(async () => {
-        const now = Date.now();
-        const statsReport = {};
-        for (const peerId in guests) {
-          // Wyjątek dla fake gości - nie usuwaj ich przez brak pulsu
-          if (peerId.startsWith("fake-")) continue;
-
-          if (heartbeats[peerId] && now - heartbeats[peerId] > 7000) {
-            removeGuest(peerId);
-            continue;
-          }
-          const guest = guests[peerId];
-          if (guest.call && guest.call.peerConnection) {
-            try {
-              const stats = await guest.call.peerConnection.getStats();
-              let videoStats = null;
-              stats.forEach((report) => {
-                if (report.type === "inbound-rtp" && report.kind === "video")
-                  videoStats = report;
-              });
-              if (videoStats) {
-                const bytes = videoStats.bytesReceived;
-                const prevBytes = statsCache[peerId] || 0;
-                const bitrate = ((bytes - prevBytes) * 8) / 1000;
-                statsCache[peerId] = bytes;
-                statsReport[peerId] = {
-                  bitrate: Math.round(bitrate),
-                  packetLoss: videoStats.packetsLost || 0,
-                  resolution:
-                    videoStats.frameWidth && videoStats.frameHeight
-                      ? `${videoStats.frameWidth}x${videoStats.frameHeight}`
-                      : "N/A",
-                };
-              }
-            } catch (e) {}
-          }
-        }
-        if (
-          directorConn &&
-          directorConn.open &&
-          Object.keys(statsReport).length > 0
-        ) {
-          directorConn.send({ type: "stats-update", stats: statsReport });
-        }
-      }, 1000);
-
       function performRefresh(id) {
         const box = document.getElementById(`box-${id}`);
         if (!box) return;
@@ -603,6 +630,17 @@
             video.play().catch((e) => console.log(e));
             if (audio) audio.play().catch((e) => console.log(e));
           }, 100);
+        }
+      }
+
+      function removeGuest(id) {
+        if (document.getElementById(`box-${id}`)) {
+          document.getElementById(`box-${id}`).remove();
+          delete guests[id];
+          delete heartbeats[id];
+          delete statsCache[id];
+          updateGuestCount();
+          sendGuestListToDirector();
         }
       }
 
