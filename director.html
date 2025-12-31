@@ -16,6 +16,7 @@
         .btn-sync { background: #6610f2; } .btn-sync:hover { background: #520dc2; } 
         .btn-toggle-off { background: #17a2b8; } .btn-toggle-off:hover { background: #117a8b; }
         .btn-toggle-on { background: #28a745; }
+        .btn-toggle-game { background: #e91e63; margin-top: 30px; } .btn-toggle-game:hover { background: #c2185b; }
         
         .status { margin-top: 10px; color: #aaa; font-weight: bold;}
         .controls { display: none; margin-top: 30px; border-top: 1px solid #555; padding-top: 20px;}
@@ -36,11 +37,19 @@
         .btn-move { background: #343a40; font-size: 14px; } .btn-move:hover { background: #495057; }
 
         /* STYL GIER */
-        .game-section { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-top: 30px; border: 1px solid #444; }
+        .game-section { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #444; display: none; }
         .game-select { width: 100%; padding: 10px; background: #444; color: white; border: none; border-radius: 5px; font-size: 16px; margin-bottom: 10px; }
         .btn-game-start { background: #e91e63; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
         .btn-game-clear { background: #555; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
-        .btn-game-start:hover { background: #c2185b; }
+        
+        /* Lista Graczy w Grze */
+        #game-players-list { margin-top: 15px; }
+        .game-player-row { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; background: #333; padding: 5px; border-radius: 5px; }
+        .game-player-name { flex-grow: 1; font-weight: bold; font-size: 0.9em; }
+        .game-input { background: #111; border: 1px solid #555; color: yellow; padding: 5px; width: 100px; border-radius: 3px; }
+        .btn-mini { padding: 5px 8px; font-size: 12px; width: auto; }
+        .btn-reroll { background: #9c27b0; }
+        .btn-send { background: #009688; }
     </style>
 </head>
 <body>
@@ -73,15 +82,12 @@
             <button class="btn-tool btn-refresh-all" onclick="refreshCam('all')" style="margin-top: 20px;">🔄 Odśwież Bufory (Fix Lag)</button>
             <button class="btn-tool btn-sync" onclick="syncGuestsWithOBS()">📡 Wymuś połączenie z nowym OBS</button>
             
-            <h2>🎤 Zarządzanie Gośćmi:</h2>
-            <div id="guest-list">
-                <p style="text-align:center; color:#777;">Oczekiwanie na gości...</p>
-            </div>
-            <p style="color: #555; font-size: 0.8em; margin-top: 10px;">Easter Egg: Ctrl + Shift + F</p>
+            <!-- PRZYCISK POKAŻ/UKRYJ GRY -->
+            <button class="btn-tool btn-toggle-game" onclick="toggleGamePanel()">🎮 Pokaż Panel Gier</button>
 
-            <!-- NOWA SEKCJA GIER -->
-            <div class="game-section">
-                <h2>🎲 Gra: Czółko</h2>
+            <!-- SEKCJA GIER (Ukryta domyślnie) -->
+            <div id="game-section" class="game-section">
+                <h3 style="margin-top:0">Gra: Czółko</h3>
                 <select id="game-category" class="game-select">
                     <option value="Zwierzęta">🐶 Zwierzęta</option>
                     <option value="Filmy">🎬 Filmy</option>
@@ -91,14 +97,23 @@
                 </select>
                 <div style="display: flex; justify-content: space-between;">
                     <button class="btn-game-clear" onclick="clearGame()">🗑️ Wyczyść</button>
-                    <button class="btn-game-start" onclick="dealCards()">🎲 Rozdaj Hasła</button>
+                    <button class="btn-game-start" onclick="dealCards()">🎲 Rozdaj Wszystkim</button>
                 </div>
+                
+                <!-- Lista graczy do ręcznego sterowania -->
+                <div id="game-players-list"></div>
             </div>
+            
+            <h2>🎤 Zarządzanie Gośćmi:</h2>
+            <div id="guest-list">
+                <p style="text-align:center; color:#777;">Oczekiwanie na gości...</p>
+            </div>
+            <p style="color: #555; font-size: 0.8em; margin-top: 10px;">Easter Egg: Ctrl + Shift + F</p>
         </div>
     </div>
 
     <script>
-        // --- BAZA HASEŁ DO GRY ---
+        // --- BAZA HASEŁ ---
         const gameData = {
             "Zwierzęta": ["Słoń", "Żyrafa", "Chomik", "Pingwin", "Rekin", "Wąż", "Orzeł", "Biedronka", "Krowa", "Kangur", "Zebra", "Lew", "Świnka", "Pies", "Kot", "Papuga", "Krokodyl", "Małpa", "Niedźwiedź", "Żaba"],
             "Filmy": ["Titanic", "Shrek", "Matrix", "Harry Potter", "Gwiezdne Wojny", "Król Lew", "Władca Pierścieni", "Joker", "Avengers", "Batman", "Spider-Man", "Forrest Gump", "Kraina Lodu", "Minionki", "Piraci z Karaibów"],
@@ -127,6 +142,9 @@
         let guestOrder = []; 
         let labelsVisible = false;
         let iconsVisible = false;
+        
+        // Stan Gry (Kto jakie ma hasło)
+        const currentWords = {};
 
         window.onload = function() {
             if(!roomID) {
@@ -145,50 +163,99 @@
             }
         }
 
-        // --- LOGIKA GRY ---
+        // --- LOGIKA GIER (ROZBUDOWANA) ---
+        function toggleGamePanel() {
+            const panel = document.getElementById('game-section');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                // Odśwież listę graczy w panelu gry
+                renderGameControls();
+            }
+        }
+
         function dealCards() {
             const category = document.getElementById('game-category').value;
-            const words = [...gameData[category]]; // Kopia tablicy, żeby nie psuć oryginału
+            const words = [...gameData[category]];
             
-            // Określamy listę ID gości (w Multi z bazy, w Standard z orderu/cache)
-            let guestIds = [];
-            if(isMulti) {
-                guestIds = Object.keys(multiGuestsState);
-            } else {
-                guestIds = guestOrder; // W trybie standard guestOrder jest aktualizowany z listy OBS
-            }
+            let guestIds = isMulti ? Object.keys(multiGuestsState) : guestOrder;
 
             if(guestIds.length === 0) {
                 alert("Brak gości do rozdania kart!");
                 return;
             }
 
-            const assignments = {};
-
             guestIds.forEach(id => {
-                if (words.length === 0) words.push(...gameData[category]); // Jak braknie słów, zresetuj pulę
-                
-                // Losowanie indeksu
+                if (words.length === 0) words.push(...gameData[category]);
                 const randomIndex = Math.floor(Math.random() * words.length);
                 const word = words[randomIndex];
-                
-                // Usuwamy wylosowane, żeby się nie powtarzało (jeśli jest dość słów)
                 words.splice(randomIndex, 1);
                 
-                assignments[id] = word;
+                currentWords[id] = word;
             });
 
-            console.log("Rozdano karty:", assignments);
-            broadcastCommand({ type: 'game-deal', cards: assignments });
+            console.log("Rozdano karty:", currentWords);
+            broadcastCommand({ type: 'game-deal', cards: currentWords });
+            renderGameControls(); // Zaktualizuj widok w panelu gry
         }
 
         function clearGame() {
+            for (let id in currentWords) delete currentWords[id];
             broadcastCommand({ type: 'game-clear' });
+            renderGameControls();
+        }
+
+        // Indywidualna zmiana hasła
+        function updateGuestWord(id) {
+            const input = document.getElementById(`word-input-${id}`);
+            const newWord = input.value;
+            if (newWord) {
+                currentWords[id] = newWord;
+                broadcastCommand({ type: 'game-update-card', targetId: id, word: newWord });
+            }
+        }
+
+        // Indywidualne losowanie
+        function rerollGuest(id) {
+            const category = document.getElementById('game-category').value;
+            const words = gameData[category];
+            const randomWord = words[Math.floor(Math.random() * words.length)];
+            
+            // Wpisz do inputa i wyślij
+            const input = document.getElementById(`word-input-${id}`);
+            if(input) input.value = randomWord;
+            
+            currentWords[id] = randomWord;
+            broadcastCommand({ type: 'game-update-card', targetId: id, word: randomWord });
+        }
+
+        // Renderowanie listy kontrolnej w panelu gry
+        function renderGameControls() {
+            const container = document.getElementById('game-players-list');
+            container.innerHTML = "";
+            
+            let guestIds = isMulti ? Object.keys(multiGuestsState) : guestOrder;
+            
+            guestIds.forEach(id => {
+                const name = (multiGuestsState[id]) ? multiGuestsState[id].name : "Gość";
+                const currentWord = currentWords[id] || "";
+
+                const row = document.createElement('div');
+                row.className = 'game-player-row';
+                row.innerHTML = `
+                    <div class="game-player-name">${name}</div>
+                    <input type="text" id="word-input-${id}" class="game-input" value="${currentWord}">
+                    <button class="btn-mini btn-reroll" onclick="rerollGuest('${id}')">🎲</button>
+                    <button class="btn-mini btn-send" onclick="updateGuestWord('${id}')">✅</button>
+                `;
+                container.appendChild(row);
+            });
         }
         // ------------------
 
         // ... [RESZTA KODU BEZ ZMIAN - connectToOBS, handleIncomingConnection itp.] ...
-        // (Skopiuj resztę funkcji z poprzedniej wersji director.html - są identyczne)
+        // (Wklejam skrótowo resztę, aby plik był kompletny, ale logika jest ta sama co wcześniej)
         
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && (e.key === 'F' || e.key === 'f')) addFakeGuest();
@@ -205,6 +272,7 @@
             multiGuestsState[fakeId] = { id: fakeId, name: randomName, muted: false, mirrored: false, conn: null };
             if (!guestOrder.includes(fakeId)) guestOrder.push(fakeId);
             refreshMultiModeUI();
+            renderGameControls(); // Odśwież też panel gry
         }
 
         function connectToOBS() {
@@ -247,6 +315,7 @@
                     delete multiGuestsState[connection.peer];
                     guestOrder = guestOrder.filter(id => id !== connection.peer);
                     refreshMultiModeUI();
+                    renderGameControls();
                 }
                 updateStatusMsg();
             });
@@ -266,6 +335,7 @@
                 const newIds = data.list.map(g => g.id);
                 guestOrder = guestOrder.filter(id => newIds.includes(id));
                 refreshMultiModeUI();
+                renderGameControls();
             }
             if(data.type === 'stats-update') updateStats(data.stats);
             if (isMulti) {
@@ -274,6 +344,7 @@
                     multiGuestsState[sourceConn.peer] = { id: sourceConn.peer, name: data.name || "Gość", muted: false, mirrored: false, conn: sourceConn };
                     if (!guestOrder.includes(sourceConn.peer)) guestOrder.push(sourceConn.peer);
                     refreshMultiModeUI();
+                    renderGameControls();
                     updateStatusMsg();
                 }
                 if(data.type === 'mic-status' && sourceConn) {

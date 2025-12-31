@@ -5,24 +5,31 @@
     <title>WIDOK OBS</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        /* ... (Poprzednie style bez zmian) ... */
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; font-family: 'Segoe UI', sans-serif; }
+        
         #video-container { width: 100%; height: 100%; transition: all 0.5s ease; position: relative; }
-        .video-box { position: relative; overflow: hidden; border: 2px solid white; box-shadow: 0 0 15px rgba(0,0,0,0.7); background: #000; transition: all 0.5s ease; }
+        
+        .video-box { 
+            position: relative; overflow: hidden; border: 2px solid white; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.7); background: #000; transition: all 0.5s ease; 
+        }
+        
         video, img.fake-cam { width: 100%; height: 100%; object-fit: cover; display: block; }
         video.mirror-effect, img.mirror-effect { transform: scaleX(-1); }
+        
         .mute-icon { position: absolute; top: 10px; right: 10px; color: red; font-size: 24px; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 50%; display: none; z-index: 20; }
         .label { position: absolute; bottom: 10px; left: 10px; background: rgba(0, 0, 0, 0.7); color: white; padding: 5px 15px; border-radius: 4px; font-size: 1.2rem; font-weight: bold; text-shadow: 1px 1px 2px black; border-left: 4px solid #00d2ff; z-index: 10; display: none; }
+        
         #video-container:not(.show-labels) .label { display: none !important; }
         #video-container:not(.show-icons) .mute-icon { display: none !important; }
 
-        /* --- NOWY STYL: KARTKA CZÓŁKO --- */
+        /* --- KARTKA CZÓŁKO (Zmieniono top na 5%) --- */
         .game-card {
             position: absolute;
-            top: 15%; /* Na czole */
+            top: 5%; /* BYŁO 15%, JEST 5% */
             left: 50%;
             transform: translateX(-50%);
-            background: #ffeb3b; /* Żółty Post-it */
+            background: #ffeb3b;
             color: #000;
             padding: 10px 20px;
             font-size: 2em;
@@ -34,6 +41,7 @@
             text-align: center;
             border: 2px solid #fdd835;
             animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            white-space: nowrap; /* Zapobiega łamaniu krótkich haseł */
         }
 
         @keyframes popIn {
@@ -41,7 +49,7 @@
             100% { transform: translateX(-50%) scale(1) rotate(0deg); opacity: 1; }
         }
 
-        /* ... (Reszta stylów układów: .layout-grid, split, center-stage - BEZ ZMIAN) ... */
+        /* UKŁADY */
         .layout-grid { display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: 15px; padding: 20px; box-sizing: border-box; }
         .layout-grid .video-box { width: 45%; height: 45%; } 
         .layout-grid[data-count="1"] .video-box { width: 85%; height: 85%; }
@@ -59,12 +67,10 @@
         .layout-bottom .video-box { width: 280px; height: 157px; margin: 0 10px; }
         .layout-top { display: flex; flex-direction: row; justify-content: center; align-items: flex-start; padding-top: 20px; height: 100vh; box-sizing: border-box; }
         .layout-top .video-box { width: 280px; height: 157px; margin: 0 10px; }
-        
         .layout-split { display: grid; grid-template-columns: 320px 1fr 320px; grid-auto-rows: min-content; align-content: center; row-gap: 30px; padding: 20px 40px; height: 100vh; box-sizing: border-box; }
         .layout-split .video-box { width: 100%; height: 180px; margin: 0; }
         .layout-split .video-box:nth-child(odd) { grid-column: 1; justify-self: start; }
         .layout-split .video-box:nth-child(even) { grid-column: 3; justify-self: end; }
-
         .layout-center-stage { display: grid; grid-template-columns: 300px 1fr 300px; grid-auto-rows: min-content; gap: 15px; padding: 20px; height: 100vh; box-sizing: border-box; align-content: center; }
         .layout-center-stage .video-box { width: 100%; height: 169px; margin: 0; }
         .layout-center-stage .video-box:nth-child(1) { grid-column: 2; grid-row: 1 / span 10; width: 100%; height: auto; max-height: 90vh; aspect-ratio: 16/9; align-self: center; z-index: 10; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
@@ -155,7 +161,6 @@
 
         function handleData(data, conn) {
             if(data.type === 'layout') container.className = data.mode;
-            
             if(data.type === 'toggle-labels') {
                 if (data.show) container.classList.add('show-labels');
                 else container.classList.remove('show-labels');
@@ -189,18 +194,14 @@
 
             // --- OBSŁUGA GRY ---
             if(data.type === 'game-deal') {
-                // Czyścimy stare
                 document.querySelectorAll('.game-card').forEach(el => el.remove());
-                // Rozdajemy nowe
                 for (const [id, word] of Object.entries(data.cards)) {
-                    const box = document.getElementById(`box-${id}`);
-                    if(box) {
-                        const card = document.createElement('div');
-                        card.className = 'game-card';
-                        card.innerText = word;
-                        box.appendChild(card);
-                    }
+                    setGameCard(id, word);
                 }
+            }
+            // NOWOŚĆ: Aktualizacja pojedynczej karty
+            if(data.type === 'game-update-card') {
+                setGameCard(data.targetId, data.word);
             }
             if(data.type === 'game-clear') {
                 document.querySelectorAll('.game-card').forEach(el => el.remove());
@@ -230,11 +231,27 @@
             if(data.type === 'leave' && conn) removeGuest(conn.peer);
         }
 
+        // Pomocnicza funkcja do tworzenia/aktualizacji karty
+        function setGameCard(id, word) {
+            const box = document.getElementById(`box-${id}`);
+            if(!box) return;
+            
+            // Sprawdź czy karta już jest, jak tak to usuń
+            let oldCard = box.querySelector('.game-card');
+            if(oldCard) oldCard.remove();
+
+            const card = document.createElement('div');
+            card.className = 'game-card';
+            card.innerText = word;
+            box.appendChild(card);
+        }
+
         function updateGuestCount() {
             const count = container.querySelectorAll('.video-box').length;
             container.setAttribute('data-count', count);
         }
 
+        // --- PĘTLA LOGIKI ---
         setInterval(async () => {
             const now = Date.now();
             const statsReport = {};
@@ -256,6 +273,7 @@
                             const bytes = videoStats.bytesReceived;
                             const prevBytes = statsCache[peerId]?.bytes || 0;
                             const bitrate = ((bytes - prevBytes) * 8) / 1000;
+                            
                             const jitterBufferDelay = videoStats.jitterBufferDelay || 0;
                             const jitterBufferEmitted = videoStats.jitterBufferEmittedCount || 1;
                             const prevDelayTotal = statsCache[peerId]?.delayTotal || 0;
