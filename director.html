@@ -1,506 +1,1038 @@
 <!DOCTYPE html>
 <html lang="pl">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>REŻYSERKA</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #333; color: white; text-align: center; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; }
-        
-        button { cursor: pointer; border: none; border-radius: 5px; color: white; transition: 0.2s; }
-        .btn-layout { background: #007bff; width: 45%; padding: 12px; font-size: 14px; margin: 5px; }
-        .btn-layout:hover { background: #0056b3; }
-        .btn-tool { width: 93%; padding: 10px; margin: 5px auto; display: block; font-weight: bold; }
-        .btn-refresh-all { background: #ff9800; } .btn-refresh-all:hover { background: #e68900; }
-        .btn-sync { background: #6610f2; } .btn-sync:hover { background: #520dc2; } 
-        .btn-toggle-off { background: #17a2b8; } .btn-toggle-off:hover { background: #117a8b; }
-        .btn-toggle-on { background: #28a745; }
-        .btn-toggle-game { background: #e91e63; margin-top: 30px; } .btn-toggle-game:hover { background: #c2185b; }
-        
-        .status { margin-top: 10px; color: #aaa; font-weight: bold;}
-        .controls { display: none; margin-top: 30px; border-top: 1px solid #555; padding-top: 20px;}
-        input { display: none; }
+      body {
+        font-family: sans-serif;
+        background: #333;
+        color: white;
+        text-align: center;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
 
-        #guest-list { margin-top: 20px; text-align: left; background: #222; padding: 20px; border-radius: 10px; }
-        .guest-item { display: flex; justify-content: space-between; align-items: center; background: #444; padding: 10px; margin-bottom: 10px; border-radius: 5px; flex-wrap: wrap; }
-        .guest-info { display: flex; flex-direction: column; flex-grow: 1; }
-        .guest-name { font-size: 1.2em; font-weight: bold; }
-        .guest-stats { font-size: 0.75em; color: #aaa; margin-top: 4px; font-family: monospace; }
-        .stat-good { color: #00ff00; } .stat-mid { color: #ffcc00; } .stat-bad { color: #ff4444; font-weight: bold; }
-        .guest-actions { display: flex; gap: 5px; }
-        .btn-icon { width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .mic-on { background: #28a745; } .mic-off { background: #dc3545; }
-        .btn-refresh { background: #ff9800; } .btn-refresh:hover { background: #e68900; }
-        .btn-mirror { background: #6c757d; } .btn-mirror:hover { background: #5a6268; }
-        .mirror-on { background: #007bff; border: 2px solid white; }
-        .btn-move { background: #343a40; font-size: 14px; } .btn-move:hover { background: #495057; }
+      button {
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        transition: 0.2s;
+      }
+      .btn-layout {
+        background: #007bff;
+        width: 45%;
+        padding: 12px;
+        font-size: 14px;
+        margin: 5px;
+      }
+      .btn-layout:hover {
+        background: #0056b3;
+      }
+      .btn-tool {
+        width: 93%;
+        padding: 10px;
+        margin: 5px auto;
+        display: block;
+        font-weight: bold;
+      }
+      .btn-refresh-all {
+        background: #ff9800;
+      }
+      .btn-refresh-all:hover {
+        background: #e68900;
+      }
+      .btn-sync {
+        background: #6610f2;
+      }
+      .btn-sync:hover {
+        background: #520dc2;
+      }
+      .btn-toggle-off {
+        background: #17a2b8;
+      }
+      .btn-toggle-off:hover {
+        background: #117a8b;
+      }
+      .btn-toggle-on {
+        background: #28a745;
+      }
+      .btn-toggle-game {
+        background: #e91e63;
+        margin-top: 30px;
+      }
+      .btn-toggle-game:hover {
+        background: #c2185b;
+      }
 
-        /* STYL GIER - Poprawiony */
-        .game-section { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #444; display: none; }
-        
-        .game-menu-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .game-tile { width: 45%; padding: 20px; background: #444; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold; }
-        .game-tile:hover { background: #555; transform: scale(1.05); }
-        .game-tile-active { background: #e91e63; }
+      .status {
+        margin-top: 10px;
+        color: #aaa;
+        font-weight: bold;
+      }
+      .controls {
+        display: none;
+        margin-top: 30px;
+        border-top: 1px solid #555;
+        padding-top: 20px;
+      }
+      input {
+        display: none;
+      }
 
-        #game-heads-up { display: none; }
-        .game-select { width: 100%; padding: 10px; background: #444; color: white; border: none; border-radius: 5px; font-size: 16px; margin-bottom: 10px; }
-        .btn-game-back { background: #666; width: 100%; padding: 8px; margin-bottom: 15px; }
-        .btn-game-start { background: #e91e63; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
-        .btn-game-clear { background: #555; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
-        
-        /* Lista Graczy w Grze - WYMUSZENIE WIDOCZNOŚCI INPUTA */
-        #game-players-list { margin-top: 15px; text-align: left; width: 100%; }
-        
-        .game-player-row { 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            margin-bottom: 8px; 
-            background: #3a3a3a; 
-            padding: 10px; 
-            border-radius: 5px; 
-            border: 1px solid #555;
-        }
-        
-        .game-player-name { 
-            width: 90px; 
-            min-width: 90px;
-            font-weight: bold; 
-            font-size: 0.9em; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            white-space: nowrap; 
-        }
-        
-        /* Styl Pola Tekstowego - Wysoki Kontrast */
-        input.game-input { 
-            display: inline-block !important; /* Wymuszenie widoczności */
-            background: #fff !important;      /* Białe tło */
-            border: 2px solid #666 !important; 
-            color: #000 !important;           /* Czarny tekst */
-            padding: 8px !important; 
-            flex-grow: 1; 
-            min-width: 50px;                  /* Minimalna szerokość */
-            border-radius: 4px; 
-            font-size: 14px;
-            height: auto;
-        }
-        
-        input.game-input:focus { border-color: #00d2ff !important; outline: none; }
-        
-        /* Przyciski w grze */
-        .btn-mini { padding: 8px 12px; font-size: 13px; width: auto; font-weight: bold; border-radius: 4px; border:none; cursor: pointer; color:white; transition: 0.2s;}
-        .btn-reroll { background: #9c27b0; } .btn-reroll:hover { background: #7b1fa2; }
-        .btn-send { background: #009688; } .btn-send:hover { background: #00796b; }
+      #guest-list {
+        margin-top: 20px;
+        text-align: left;
+        background: #222;
+        padding: 20px;
+        border-radius: 10px;
+      }
+      .guest-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #444;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        flex-wrap: wrap;
+      }
+      .guest-info {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+      }
+      .guest-name {
+        font-size: 1.2em;
+        font-weight: bold;
+      }
+      .guest-stats {
+        font-size: 0.75em;
+        color: #aaa;
+        margin-top: 4px;
+        font-family: monospace;
+      }
+      .stat-good {
+        color: #00ff00;
+      }
+      .stat-mid {
+        color: #ffcc00;
+      }
+      .stat-bad {
+        color: #ff4444;
+        font-weight: bold;
+      }
+      .guest-actions {
+        display: flex;
+        gap: 5px;
+      }
+      .btn-icon {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+      }
+      .mic-on {
+        background: #28a745;
+      }
+      .mic-off {
+        background: #dc3545;
+      }
+      .btn-refresh {
+        background: #ff9800;
+      }
+      .btn-refresh:hover {
+        background: #e68900;
+      }
+      .btn-mirror {
+        background: #6c757d;
+      }
+      .btn-mirror:hover {
+        background: #5a6268;
+      }
+      .mirror-on {
+        background: #007bff;
+        border: 2px solid white;
+      }
+      .btn-move {
+        background: #343a40;
+        font-size: 14px;
+      }
+      .btn-move:hover {
+        background: #495057;
+      }
+
+      /* STYL GIER - Poprawiony */
+      .game-section {
+        background: #2a2a2a;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 10px;
+        border: 1px solid #444;
+        display: none;
+      }
+
+      .game-menu-grid {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .game-tile {
+        width: 45%;
+        padding: 20px;
+        background: #444;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.2s;
+        font-weight: bold;
+      }
+      .game-tile:hover {
+        background: #555;
+        transform: scale(1.05);
+      }
+      .game-tile-active {
+        background: #e91e63;
+      }
+
+      #game-heads-up {
+        display: none;
+      }
+      .game-select {
+        width: 100%;
+        padding: 10px;
+        background: #444;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+      .btn-game-back {
+        background: #666;
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+      }
+      .btn-game-start {
+        background: #e91e63;
+        width: 48%;
+        display: inline-block;
+        padding: 12px;
+        font-weight: bold;
+      }
+      .btn-game-clear {
+        background: #555;
+        width: 48%;
+        display: inline-block;
+        padding: 12px;
+        font-weight: bold;
+      }
+
+      /* Lista Graczy w Grze - WYMUSZENIE WIDOCZNOŚCI INPUTA */
+      #game-players-list {
+        margin-top: 15px;
+        text-align: left;
+        width: 100%;
+      }
+
+      .game-player-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        background: #3a3a3a;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #555;
+      }
+
+      .game-player-name {
+        width: 90px;
+        min-width: 90px;
+        font-weight: bold;
+        font-size: 0.9em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* Styl Pola Tekstowego - Wysoki Kontrast */
+      input.game-input {
+        display: inline-block !important; /* Wymuszenie widoczności */
+        background: #fff !important; /* Białe tło */
+        border: 2px solid #666 !important;
+        color: #000 !important; /* Czarny tekst */
+        padding: 8px !important;
+        flex-grow: 1;
+        min-width: 50px; /* Minimalna szerokość */
+        border-radius: 4px;
+        font-size: 14px;
+        height: auto;
+      }
+
+      input.game-input:focus {
+        border-color: #00d2ff !important;
+        outline: none;
+      }
+
+      /* Przyciski w grze */
+      .btn-mini {
+        padding: 8px 12px;
+        font-size: 13px;
+        width: auto;
+        font-weight: bold;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        color: white;
+        transition: 0.2s;
+      }
+      .btn-reroll {
+        background: #9c27b0;
+      }
+      .btn-reroll:hover {
+        background: #7b1fa2;
+      }
+      .btn-send {
+        background: #009688;
+      }
+      .btn-send:hover {
+        background: #00796b;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>Panel Reżysera</h1>
-        <div class="status" id="status-msg">Inicjalizacja...</div>
-        <input type="text" id="target-id">
+      <h1>Panel Reżysera</h1>
+      <div class="status" id="status-msg">Inicjalizacja...</div>
+      <input type="text" id="target-id" />
 
-        <div class="controls" id="control-panel">
-            <h2>🎥 Układ kamer:</h2>
-            <div style="margin-bottom: 15px; border-bottom: 1px solid #555; padding-bottom: 10px;">
-                <button class="btn-layout" onclick="sendLayout('layout-grid')" style="width: 90%; background: #6f42c1;">🔳 Pełna Siatka (Grid)</button>
-            </div>
-            <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 5px;">
-                <button class="btn-layout" onclick="sendLayout('layout-top')">⬆️ Góra</button>
-                <button class="btn-layout" onclick="sendLayout('layout-bottom')">⬇️ Dół</button>
-                <button class="btn-layout" onclick="sendLayout('layout-sidebar-left')">⬅️ Lewo</button>
-                <button class="btn-layout" onclick="sendLayout('layout-sidebar-right')">➡️ Prawo</button>
-            </div>
-            <div style="margin-top: 10px;">
-                <button class="btn-layout" onclick="sendLayout('layout-split')" style="width: 90%; background: #e83e8c;">↔️ Obie Strony (Split)</button>
-            </div>
-            <div style="margin-top: 5px;">
-                <button class="btn-layout" onclick="sendLayout('layout-center-stage')" style="width: 90%; background: #6610f2;">⭐️ Center Stage</button>
-            </div>
-
-            <h2 style="margin-top: 30px;">⚙️ Narzędzia:</h2>
-            <button class="btn-tool btn-toggle-off" id="btn-labels" onclick="toggleLabels()">🔤 Podpisy: UKRYTE</button>
-            <button class="btn-tool btn-toggle-off" id="btn-icons" onclick="toggleIcons()">🔇 Ikony Mute: UKRYTE</button>
-            <button class="btn-tool btn-refresh-all" onclick="refreshCam('all')" style="margin-top: 20px;">🔄 Odśwież Bufory (Fix Lag)</button>
-            <button class="btn-tool btn-sync" onclick="syncGuestsWithOBS()">📡 Wymuś połączenie z nowym OBS</button>
-            
-            <button class="btn-tool btn-toggle-game" onclick="toggleGamePanel()">🎮 Pokaż Panel Gier</button>
-
-            <!-- SEKCJA GIER -->
-            <div id="game-section" class="game-section">
-                
-                <!-- MENU GIER -->
-                <div id="game-menu">
-                    <h3>Wybierz Grę:</h3>
-                    <div class="game-menu-grid">
-                        <div class="game-tile game-tile-active" onclick="openGame('heads-up')">
-                            🎲 Czółko<br><span style="font-size:0.8em; font-weight:normal;">Hasła na czoło</span>
-                        </div>
-                        <div class="game-tile" style="opacity: 0.5; cursor: not-allowed;">
-                            🚧 Kalambury<br><span style="font-size:0.8em; font-weight:normal;">(Wkrótce)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- WIDOK GRY: CZÓŁKO -->
-                <div id="game-heads-up">
-                    <button class="btn-game-back" onclick="closeGame()">⬅ Wróć do menu</button>
-                    
-                    <h3 style="margin-top:0">Gra: Czółko</h3>
-                    <select id="game-category" class="game-select">
-                        <option value="Zwierzęta">🐶 Zwierzęta</option>
-                        <option value="Filmy">🎬 Filmy</option>
-                        <option value="Postacie">🦸 Postacie Fikcyjne</option>
-                        <option value="Zawody">👷 Zawody</option>
-                        <option value="Przedmioty">📦 Przedmioty</option>
-                    </select>
-                    
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                        <button class="btn-game-clear" onclick="clearGame()">🗑️ Wyczyść Wszystkich</button>
-                        <button class="btn-game-start" onclick="dealCards()">🎲 Rozdaj Wszystkim</button>
-                    </div>
-                    
-                    <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0;">
-                    <p style="color: #aaa; font-size: 0.8em; margin-bottom: 5px;">Zarządzanie ręczne (Wpisz i kliknij Wyślij):</p>
-                    
-                    <!-- TUTAJ POJAWIĄ SIĘ POLA TEKSTOWE DLA GRACZY -->
-                    <div id="game-players-list"></div>
-                </div>
-
-            </div>
-            
-            <h2>🎤 Zarządzanie Gośćmi:</h2>
-            <div id="guest-list">
-                <p style="text-align:center; color:#777;">Oczekiwanie na gości...</p>
-            </div>
-            <p style="color: #555; font-size: 0.8em; margin-top: 10px;">Easter Egg: Ctrl + Shift + F</p>
+      <div class="controls" id="control-panel">
+        <h2>🎥 Układ kamer:</h2>
+        <div
+          style="
+            margin-bottom: 15px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+          "
+        >
+          <button
+            class="btn-layout"
+            onclick="sendLayout('layout-grid')"
+            style="width: 90%; background: #6f42c1"
+          >
+            🔳 Pełna Siatka (Grid)
+          </button>
         </div>
+        <div
+          style="
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+          "
+        >
+          <button class="btn-layout" onclick="sendLayout('layout-top')">
+            ⬆️ Góra
+          </button>
+          <button class="btn-layout" onclick="sendLayout('layout-bottom')">
+            ⬇️ Dół
+          </button>
+          <button
+            class="btn-layout"
+            onclick="sendLayout('layout-sidebar-left')"
+          >
+            ⬅️ Lewo
+          </button>
+          <button
+            class="btn-layout"
+            onclick="sendLayout('layout-sidebar-right')"
+          >
+            ➡️ Prawo
+          </button>
+        </div>
+        <div style="margin-top: 10px">
+          <button
+            class="btn-layout"
+            onclick="sendLayout('layout-split')"
+            style="width: 90%; background: #e83e8c"
+          >
+            ↔️ Obie Strony (Split)
+          </button>
+        </div>
+        <div style="margin-top: 5px">
+          <button
+            class="btn-layout"
+            onclick="sendLayout('layout-center-stage')"
+            style="width: 90%; background: #6610f2"
+          >
+            ⭐️ Center Stage
+          </button>
+        </div>
+
+        <h2 style="margin-top: 30px">⚙️ Narzędzia:</h2>
+        <button
+          class="btn-tool btn-toggle-off"
+          id="btn-labels"
+          onclick="toggleLabels()"
+        >
+          🔤 Podpisy: UKRYTE
+        </button>
+        <button
+          class="btn-tool btn-toggle-off"
+          id="btn-icons"
+          onclick="toggleIcons()"
+        >
+          🔇 Ikony Mute: UKRYTE
+        </button>
+        <button
+          class="btn-tool btn-refresh-all"
+          onclick="refreshCam('all')"
+          style="margin-top: 20px"
+        >
+          🔄 Odśwież Bufory (Fix Lag)
+        </button>
+        <button class="btn-tool btn-sync" onclick="syncGuestsWithOBS()">
+          📡 Wymuś połączenie z nowym OBS
+        </button>
+
+        <button class="btn-tool btn-toggle-game" onclick="toggleGamePanel()">
+          🎮 Pokaż Panel Gier
+        </button>
+
+        <!-- SEKCJA GIER -->
+        <div id="game-section" class="game-section">
+          <!-- MENU GIER -->
+          <div id="game-menu">
+            <h3>Wybierz Grę:</h3>
+            <div class="game-menu-grid">
+              <div
+                class="game-tile game-tile-active"
+                onclick="openGame('heads-up')"
+              >
+                🎲 Czółko<br /><span
+                  style="font-size: 0.8em; font-weight: normal"
+                  >Hasła na czoło</span
+                >
+              </div>
+              <div class="game-tile" style="opacity: 0.5; cursor: not-allowed">
+                🚧 Kalambury<br /><span
+                  style="font-size: 0.8em; font-weight: normal"
+                  >(Wkrótce)</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- WIDOK GRY: CZÓŁKO -->
+          <div id="game-heads-up">
+            <button class="btn-game-back" onclick="closeGame()">
+              ⬅ Wróć do menu
+            </button>
+
+            <h3 style="margin-top: 0">Gra: Czółko</h3>
+            <select id="game-category" class="game-select">
+              <option value="Zwierzęta">🐶 Zwierzęta</option>
+              <option value="Filmy">🎬 Filmy</option>
+              <option value="Postacie">🦸 Postacie Fikcyjne</option>
+              <option value="Zawody">👷 Zawody</option>
+              <option value="Przedmioty">📦 Przedmioty</option>
+            </select>
+
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 15px;
+              "
+            >
+              <button class="btn-game-clear" onclick="clearGame()">
+                🗑️ Wyczyść Wszystkich
+              </button>
+              <button class="btn-game-start" onclick="dealCards()">
+                🎲 Rozdaj Wszystkim
+              </button>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0" />
+            <p style="color: #aaa; font-size: 0.8em; margin-bottom: 5px">
+              Zarządzanie ręczne (Wpisz i kliknij Wyślij):
+            </p>
+
+            <!-- TUTAJ POJAWIĄ SIĘ POLA TEKSTOWE DLA GRACZY -->
+            <div id="game-players-list"></div>
+          </div>
+        </div>
+
+        <h2>🎤 Zarządzanie Gośćmi:</h2>
+        <div id="guest-list">
+          <p style="text-align: center; color: #777">Oczekiwanie na gości...</p>
+        </div>
+        <p style="color: #555; font-size: 0.8em; margin-top: 10px">
+          Easter Egg: Ctrl + Shift + F
+        </p>
+      </div>
     </div>
 
     <script>
-        const gameData = {
-            "Zwierzęta": ["Słoń", "Żyrafa", "Chomik", "Pingwin", "Rekin", "Wąż", "Orzeł", "Biedronka", "Krowa", "Kangur", "Zebra", "Lew", "Świnka", "Pies", "Kot", "Papuga", "Krokodyl", "Małpa", "Niedźwiedź", "Żaba"],
-            "Filmy": ["Titanic", "Shrek", "Matrix", "Harry Potter", "Gwiezdne Wojny", "Król Lew", "Władca Pierścieni", "Joker", "Avengers", "Batman", "Spider-Man", "Forrest Gump", "Kraina Lodu", "Minionki", "Piraci z Karaibów"],
-            "Postacie": ["Myszka Miki", "Superman", "Święty Mikołaj", "Sherlock Holmes", "Mario", "Pikachu", "Vader", "Wiedźmin", "Shrek", "Barbie", "SpongeBob", "Hulk", "Iron Man", "Tarzan", "Zorro"],
-            "Zawody": ["Strażak", "Policjant", "Lekarz", "Nauczyciel", "Kucharz", "Kierowca", "Pilot", "Astronauta", "Hydraulik", "Fryzjer", "Aktor", "Piosenkarz", "Malarz", "Rolnik", "Programista"],
-            "Przedmioty": ["Krzesło", "Telefon", "Samochód", "Długopis", "Butelka", "Książka", "Komputer", "Zegarek", "Lustro", "Klucz", "Młotek", "Szczoteczka", "Widelec", "Okulary", "Poduszka"]
-        };
+      const gameData = {
+        Zwierzęta: [
+          "Słoń",
+          "Żyrafa",
+          "Chomik",
+          "Pingwin",
+          "Rekin",
+          "Wąż",
+          "Orzeł",
+          "Biedronka",
+          "Krowa",
+          "Kangur",
+          "Zebra",
+          "Lew",
+          "Świnka",
+          "Pies",
+          "Kot",
+          "Papuga",
+          "Krokodyl",
+          "Małpa",
+          "Niedźwiedź",
+          "Żaba",
+        ],
+        Filmy: [
+          "Titanic",
+          "Shrek",
+          "Matrix",
+          "Harry Potter",
+          "Gwiezdne Wojny",
+          "Król Lew",
+          "Władca Pierścieni",
+          "Joker",
+          "Avengers",
+          "Batman",
+          "Spider-Man",
+          "Forrest Gump",
+          "Kraina Lodu",
+          "Minionki",
+          "Piraci z Karaibów",
+        ],
+        Postacie: [
+          "Myszka Miki",
+          "Superman",
+          "Święty Mikołaj",
+          "Sherlock Holmes",
+          "Mario",
+          "Pikachu",
+          "Vader",
+          "Wiedźmin",
+          "Shrek",
+          "Barbie",
+          "SpongeBob",
+          "Hulk",
+          "Iron Man",
+          "Tarzan",
+          "Zorro",
+        ],
+        Zawody: [
+          "Strażak",
+          "Policjant",
+          "Lekarz",
+          "Nauczyciel",
+          "Kucharz",
+          "Kierowca",
+          "Pilot",
+          "Astronauta",
+          "Hydraulik",
+          "Fryzjer",
+          "Aktor",
+          "Piosenkarz",
+          "Malarz",
+          "Rolnik",
+          "Programista",
+        ],
+        Przedmioty: [
+          "Krzesło",
+          "Telefon",
+          "Samochód",
+          "Długopis",
+          "Butelka",
+          "Książka",
+          "Komputer",
+          "Zegarek",
+          "Lustro",
+          "Klucz",
+          "Młotek",
+          "Szczoteczka",
+          "Widelec",
+          "Okulary",
+          "Poduszka",
+        ],
+      };
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const useStunOnly = urlParams.get('stunonly');
-        const isMulti = urlParams.get('multi');
-        const roomID = urlParams.get('room');
+      const urlParams = new URLSearchParams(window.location.search);
+      const useStunOnly = urlParams.get("stunonly");
+      const isMulti = urlParams.get("multi");
+      const roomID = urlParams.get("room");
 
-        const selectedConfig = useStunOnly ? [ { urls: "stun:stun.l.google.com:19302" } ] : [
+      const selectedConfig = useStunOnly
+        ? [{ urls: "stun:stun.l.google.com:19302" }]
+        : [
             { urls: "stun:stun.l.google.com:19302" },
-            { urls: "turn:openrelay.metered.ca:80?transport=udp", username: "openrelayproject", credential: "openrelayproject" },
-            { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
-        ];
+            {
+              urls: "turn:openrelay.metered.ca:80?transport=udp",
+              username: "openrelayproject",
+              credential: "openrelayproject",
+            },
+            {
+              urls: "turn:openrelay.metered.ca:443?transport=tcp",
+              username: "openrelayproject",
+              credential: "openrelayproject",
+            },
+          ];
 
-        const peer = new Peer(isMulti ? roomID : undefined, { config: { iceServers: selectedConfig } });
-        
-        let conn = null; 
-        const obsClients = []; 
-        const guestConnections = []; 
-        const multiGuestsState = {}; 
-        let guestOrder = []; 
-        let labelsVisible = false;
-        let iconsVisible = false;
-        
-        const currentWords = {};
+      const peer = new Peer(isMulti ? roomID : undefined, {
+        config: { iceServers: selectedConfig },
+      });
 
-        function toggleGamePanel() {
-            const panel = document.getElementById('game-section');
-            if (panel.style.display === 'block') {
-                panel.style.display = 'none';
-            } else {
-                panel.style.display = 'block';
-                document.getElementById('game-menu').style.display = 'block';
-                document.getElementById('game-heads-up').style.display = 'none';
-            }
+      let conn = null;
+      const obsClients = [];
+      const guestConnections = [];
+      const multiGuestsState = {};
+      let guestOrder = [];
+      let labelsVisible = false;
+      let iconsVisible = false;
+
+      const currentWords = {};
+
+      function toggleGamePanel() {
+        const panel = document.getElementById("game-section");
+        if (panel.style.display === "block") {
+          panel.style.display = "none";
+        } else {
+          panel.style.display = "block";
+          document.getElementById("game-menu").style.display = "block";
+          document.getElementById("game-heads-up").style.display = "none";
+        }
+      }
+
+      function openGame(gameId) {
+        document.getElementById("game-menu").style.display = "none";
+        document.getElementById("game-heads-up").style.display = "block";
+        renderGameControls();
+      }
+
+      function closeGame() {
+        document.getElementById("game-heads-up").style.display = "none";
+        document.getElementById("game-menu").style.display = "block";
+      }
+
+      function dealCards() {
+        const category = document.getElementById("game-category").value;
+        const words = [...gameData[category]];
+        let guestIds = isMulti ? Object.keys(multiGuestsState) : guestOrder;
+
+        if (guestIds.length === 0) {
+          alert("Brak gości do rozdania kart!");
+          return;
         }
 
-        function openGame(gameId) {
-            document.getElementById('game-menu').style.display = 'none';
-            document.getElementById('game-heads-up').style.display = 'block';
-            renderGameControls();
+        guestIds.forEach((id) => {
+          if (words.length === 0) words.push(...gameData[category]);
+          const randomIndex = Math.floor(Math.random() * words.length);
+          const word = words[randomIndex];
+          words.splice(randomIndex, 1);
+          currentWords[id] = word;
+        });
+
+        console.log("Rozdano karty:", currentWords);
+        broadcastCommand({ type: "game-deal", cards: currentWords });
+        renderGameControls();
+      }
+
+      function clearGame() {
+        for (let id in currentWords) delete currentWords[id];
+        broadcastCommand({ type: "game-clear" });
+        renderGameControls();
+      }
+
+      function updateGuestWord(id) {
+        const input = document.getElementById(`word-input-${id}`);
+        const newWord = input.value;
+        currentWords[id] = newWord;
+        broadcastCommand({
+          type: "game-update-card",
+          targetId: id,
+          word: newWord,
+        });
+
+        input.style.borderColor = "#00ff00";
+        setTimeout(() => {
+          input.style.borderColor = "#666";
+        }, 500);
+      }
+
+      function rerollGuest(id) {
+        const category = document.getElementById("game-category").value;
+        const words = gameData[category];
+        const randomWord = words[Math.floor(Math.random() * words.length)];
+
+        const input = document.getElementById(`word-input-${id}`);
+        if (input) input.value = randomWord;
+
+        updateGuestWord(id);
+      }
+
+      function renderGameControls() {
+        const container = document.getElementById("game-players-list");
+        container.innerHTML = "";
+
+        let guestIds = isMulti ? Object.keys(multiGuestsState) : guestOrder;
+
+        if (guestIds.length === 0) {
+          container.innerHTML =
+            "<p style='color:#aaa; font-style:italic;'>Brak aktywnych gości. Zaproś kogoś lub dodaj sztucznych (Ctrl+Shift+F).</p>";
+          return;
         }
 
-        function closeGame() {
-            document.getElementById('game-heads-up').style.display = 'none';
-            document.getElementById('game-menu').style.display = 'block';
-        }
+        guestIds.forEach((id) => {
+          const name = multiGuestsState[id]
+            ? multiGuestsState[id].name
+            : "Gość";
+          const currentWord = currentWords[id] || "";
 
-        function dealCards() {
-            const category = document.getElementById('game-category').value;
-            const words = [...gameData[category]];
-            let guestIds = isMulti ? Object.keys(multiGuestsState) : guestOrder;
-
-            if(guestIds.length === 0) {
-                alert("Brak gości do rozdania kart!");
-                return;
-            }
-
-            guestIds.forEach(id => {
-                if (words.length === 0) words.push(...gameData[category]);
-                const randomIndex = Math.floor(Math.random() * words.length);
-                const word = words[randomIndex];
-                words.splice(randomIndex, 1);
-                currentWords[id] = word;
-            });
-
-            console.log("Rozdano karty:", currentWords);
-            broadcastCommand({ type: 'game-deal', cards: currentWords });
-            renderGameControls(); 
-        }
-
-        function clearGame() {
-            for (let id in currentWords) delete currentWords[id];
-            broadcastCommand({ type: 'game-clear' });
-            renderGameControls();
-        }
-
-        function updateGuestWord(id) {
-            const input = document.getElementById(`word-input-${id}`);
-            const newWord = input.value;
-            currentWords[id] = newWord;
-            broadcastCommand({ type: 'game-update-card', targetId: id, word: newWord });
-            
-            input.style.borderColor = "#00ff00";
-            setTimeout(() => { input.style.borderColor = "#666"; }, 500);
-        }
-
-        function rerollGuest(id) {
-            const category = document.getElementById('game-category').value;
-            const words = gameData[category];
-            const randomWord = words[Math.floor(Math.random() * words.length)];
-            
-            const input = document.getElementById(`word-input-${id}`);
-            if(input) input.value = randomWord;
-            
-            updateGuestWord(id);
-        }
-
-        function renderGameControls() {
-            const container = document.getElementById('game-players-list');
-            container.innerHTML = "";
-            
-            let guestIds = isMulti ? Object.keys(multiGuestsState) : guestOrder;
-            
-            if(guestIds.length === 0) {
-                container.innerHTML = "<p style='color:#aaa; font-style:italic;'>Brak aktywnych gości. Zaproś kogoś lub dodaj sztucznych (Ctrl+Shift+F).</p>";
-                return;
-            }
-
-            guestIds.forEach(id => {
-                const name = (multiGuestsState[id]) ? multiGuestsState[id].name : "Gość";
-                const currentWord = currentWords[id] || "";
-
-                const row = document.createElement('div');
-                row.className = 'game-player-row';
-                row.innerHTML = `
+          const row = document.createElement("div");
+          row.className = "game-player-row";
+          row.innerHTML = `
                     <div class="game-player-name" title="${name}">${name}</div>
                     <input type="text" id="word-input-${id}" class="game-input" value="${currentWord}" placeholder="Wpisz hasło...">
                     <button class="btn-mini btn-reroll" onclick="rerollGuest('${id}')" title="Losuj z kategorii">🎲</button>
                     <button class="btn-mini btn-send" onclick="updateGuestWord('${id}')" title="Wyślij ręcznie wpisane">Wyślij</button>
                 `;
-                container.appendChild(row);
-            });
-        }
+          container.appendChild(row);
+        });
+      }
 
-        window.onload = function() {
-            if(!roomID) { document.getElementById('status-msg').innerText = "BŁĄD: Brak ID w linku."; return; }
-            document.getElementById('target-id').value = roomID;
-            if (isMulti) {
-                document.getElementById('status-msg').innerText = "📡 Tryb Multi: SERWER AKTYWNY";
-                document.getElementById('control-panel').style.display = "block";
-                peer.on('connection', handleIncomingConnection);
-            } else {
-                document.getElementById('status-msg').innerText = "Szukam OBS...";
-                setTimeout(connectToOBS, 1000);
+      window.onload = function () {
+        if (!roomID) {
+          document.getElementById("status-msg").innerText =
+            "BŁĄD: Brak ID w linku.";
+          return;
+        }
+        document.getElementById("target-id").value = roomID;
+        if (isMulti) {
+          document.getElementById("status-msg").innerText =
+            "📡 Tryb Multi: SERWER AKTYWNY";
+          document.getElementById("control-panel").style.display = "block";
+          peer.on("connection", handleIncomingConnection);
+        } else {
+          document.getElementById("status-msg").innerText = "Szukam OBS...";
+          setTimeout(connectToOBS, 1000);
+        }
+      };
+      document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey && e.shiftKey && (e.key === "F" || e.key === "f"))
+          addFakeGuest();
+      });
+      function addFakeGuest() {
+        const fakeId = "fake-" + Math.floor(Math.random() * 10000);
+        const fakeNames = [
+          "Sztuczny Jan",
+          "Testowa Anna",
+          "Bot Marek",
+          "Demo Zosia",
+        ];
+        const randomName =
+          fakeNames[Math.floor(Math.random() * fakeNames.length)];
+        const randomImg = `https://picsum.photos/seed/${fakeId}/640/360`;
+        broadcastCommand({
+          type: "add-fake-guest",
+          id: fakeId,
+          name: randomName,
+          img: randomImg,
+        });
+        multiGuestsState[fakeId] = {
+          id: fakeId,
+          name: randomName,
+          muted: false,
+          mirrored: false,
+          conn: null,
+        };
+        if (!guestOrder.includes(fakeId)) guestOrder.push(fakeId);
+        refreshMultiModeUI();
+        renderGameControls();
+      }
+      function connectToOBS() {
+        const targetId = document.getElementById("target-id").value;
+        conn = peer.connect(targetId);
+        conn.on("open", () => {
+          document.getElementById("status-msg").innerText =
+            "✅ POŁĄCZONO Z OBS (Standard)";
+          document.getElementById("status-msg").style.color = "#00ff00";
+          document.getElementById("control-panel").style.display = "block";
+          conn.send({ type: "director-hello" });
+        });
+        conn.on("data", (data) => handleData(data));
+        conn.on("error", (err) => alert("Błąd: " + err));
+      }
+      function handleIncomingConnection(connection) {
+        connection.on("open", () =>
+          console.log("Połączenie:", connection.peer)
+        );
+        connection.on("data", (data) => {
+          if (data.type === "register-obs") {
+            obsClients.push(connection);
+            updateStatusMsg();
+            connection.send({ type: "toggle-labels", show: labelsVisible });
+            connection.send({ type: "toggle-icons", show: iconsVisible });
+            connection.send({ type: "layout", mode: "layout-grid" });
+            if (guestOrder.length > 0)
+              connection.send({ type: "reorder-guests", order: guestOrder });
+          }
+          if (data.type === "get-obs-list") {
+            if (!guestConnections.includes(connection))
+              guestConnections.push(connection);
+            const obsIds = obsClients.map((c) => c.peer);
+            connection.send({ type: "obs-list", targets: obsIds });
+          }
+          handleData(data, connection);
+        });
+        connection.on("close", () => {
+          let idx = obsClients.indexOf(connection);
+          if (idx > -1) obsClients.splice(idx, 1);
+          idx = guestConnections.indexOf(connection);
+          if (idx > -1) guestConnections.splice(idx, 1);
+          if (multiGuestsState[connection.peer]) {
+            delete multiGuestsState[connection.peer];
+            guestOrder = guestOrder.filter((id) => id !== connection.peer);
+            refreshMultiModeUI();
+            renderGameControls();
+          }
+          updateStatusMsg();
+        });
+      }
+      function updateStatusMsg() {
+        document.getElementById(
+          "status-msg"
+        ).innerText = `✅ OBS: ${obsClients.length} | Gości: ${guestConnections.length}`;
+        document.getElementById("status-msg").style.color = "#00ff00";
+      }
+      function handleData(data, sourceConn) {
+        if (data.type === "guest-list" && !isMulti) {
+          data.list.forEach((g) => {
+            multiGuestsState[g.id] = g;
+            if (!guestOrder.includes(g.id)) guestOrder.push(g.id);
+          });
+          const newIds = data.list.map((g) => g.id);
+          guestOrder = guestOrder.filter((id) => newIds.includes(id));
+          refreshMultiModeUI();
+          renderGameControls();
+        }
+        if (data.type === "stats-update") updateStats(data.stats);
+        if (isMulti) {
+          if (data.type === "identify" && sourceConn) {
+            if (!guestConnections.includes(sourceConn))
+              guestConnections.push(sourceConn);
+            multiGuestsState[sourceConn.peer] = {
+              id: sourceConn.peer,
+              name: data.name || "Gość",
+              muted: false,
+              mirrored: false,
+              conn: sourceConn,
+            };
+            if (!guestOrder.includes(sourceConn.peer))
+              guestOrder.push(sourceConn.peer);
+            refreshMultiModeUI();
+            renderGameControls();
+            updateStatusMsg();
+          }
+          if (data.type === "mic-status" && sourceConn) {
+            if (multiGuestsState[sourceConn.peer]) {
+              multiGuestsState[sourceConn.peer].muted = data.muted;
+              refreshMultiModeUI();
+              obsClients.forEach((c) => {
+                if (c.open)
+                  c.send({
+                    type: "mic-status",
+                    peer: sourceConn.peer,
+                    muted: data.muted,
+                  });
+              });
             }
+          }
         }
-        document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && (e.key === 'F' || e.key === 'f')) addFakeGuest(); });
-        function addFakeGuest() {
-            const fakeId = 'fake-' + Math.floor(Math.random() * 10000);
-            const fakeNames = ["Sztuczny Jan", "Testowa Anna", "Bot Marek", "Demo Zosia"];
-            const randomName = fakeNames[Math.floor(Math.random() * fakeNames.length)];
-            const randomImg = `https://picsum.photos/seed/${fakeId}/640/360`;
-            broadcastCommand({ type: 'add-fake-guest', id: fakeId, name: randomName, img: randomImg });
-            multiGuestsState[fakeId] = { id: fakeId, name: randomName, muted: false, mirrored: false, conn: null };
-            if (!guestOrder.includes(fakeId)) guestOrder.push(fakeId);
-            refreshMultiModeUI(); renderGameControls();
+      }
+      function refreshMultiModeUI() {
+        const sortedList = [];
+        guestOrder.forEach((id) => {
+          if (multiGuestsState[id]) sortedList.push(multiGuestsState[id]);
+        });
+        renderGuestList(sortedList);
+      }
+      function moveGuest(id, direction) {
+        const index = guestOrder.indexOf(id);
+        if (index === -1) return;
+        if (direction === "up" && index > 0) {
+          [guestOrder[index], guestOrder[index - 1]] = [
+            guestOrder[index - 1],
+            guestOrder[index],
+          ];
+        } else if (direction === "down" && index < guestOrder.length - 1) {
+          [guestOrder[index], guestOrder[index + 1]] = [
+            guestOrder[index + 1],
+            guestOrder[index],
+          ];
+        } else {
+          return;
         }
-        function connectToOBS() {
-            const targetId = document.getElementById('target-id').value;
-            conn = peer.connect(targetId);
-            conn.on('open', () => {
-                document.getElementById('status-msg').innerText = "✅ POŁĄCZONO Z OBS (Standard)";
-                document.getElementById('status-msg').style.color = "#00ff00";
-                document.getElementById('control-panel').style.display = "block";
-                conn.send({ type: 'director-hello' });
+        refreshMultiModeUI();
+        renderGameControls();
+        broadcastCommand({ type: "reorder-guests", order: guestOrder });
+      }
+      function broadcastCommand(cmd) {
+        if (isMulti)
+          obsClients.forEach((c) => {
+            if (c.open) c.send(cmd);
+          });
+        else if (conn && conn.open) conn.send(cmd);
+      }
+      function syncGuestsWithOBS() {
+        if (!isMulti) {
+          alert("Tylko Multi!");
+          return;
+        }
+        const btn = document.querySelector(".btn-sync");
+        btn.innerText = "⏳ Synchronizacja...";
+        guestConnections.forEach((g) => {
+          if (g.open) g.send({ type: "force-sync" });
+        });
+        setTimeout(() => {
+          btn.innerText = "📡 Wymuś połączenie z nowym OBS";
+        }, 1000);
+      }
+      function sendLayout(layoutName) {
+        broadcastCommand({ type: "layout", mode: layoutName });
+      }
+      function toggleGuestMic(id, currentMutedState) {
+        if (isMulti) {
+          const guest = multiGuestsState[id];
+          if (id.startsWith("fake-")) {
+            guest.muted = !currentMutedState;
+            refreshMultiModeUI();
+            broadcastCommand({
+              type: "remote-mute",
+              targetId: id,
+              state: guest.muted,
             });
-            conn.on('data', (data) => handleData(data));
-            conn.on('error', (err) => alert("Błąd: " + err));
+            return;
+          }
+          if (guest && guest.conn && guest.conn.open)
+            guest.conn.send({ type: "mute-cmd", state: !currentMutedState });
+        } else {
+          broadcastCommand({
+            type: "remote-mute",
+            targetId: id,
+            state: !currentMutedState,
+          });
         }
-        function handleIncomingConnection(connection) {
-            connection.on('open', () => console.log("Połączenie:", connection.peer));
-            connection.on('data', (data) => {
-                if (data.type === 'register-obs') {
-                    obsClients.push(connection);
-                    updateStatusMsg();
-                    connection.send({ type: 'toggle-labels', show: labelsVisible });
-                    connection.send({ type: 'toggle-icons', show: iconsVisible });
-                    connection.send({ type: 'layout', mode: 'layout-grid' });
-                    if(guestOrder.length > 0) connection.send({ type: 'reorder-guests', order: guestOrder });
-                }
-                if (data.type === 'get-obs-list') {
-                    if(!guestConnections.includes(connection)) guestConnections.push(connection);
-                    const obsIds = obsClients.map(c => c.peer);
-                    connection.send({ type: 'obs-list', targets: obsIds });
-                }
-                handleData(data, connection);
-            });
-            connection.on('close', () => {
-                let idx = obsClients.indexOf(connection);
-                if (idx > -1) obsClients.splice(idx, 1);
-                idx = guestConnections.indexOf(connection);
-                if (idx > -1) guestConnections.splice(idx, 1);
-                if (multiGuestsState[connection.peer]) {
-                    delete multiGuestsState[connection.peer];
-                    guestOrder = guestOrder.filter(id => id !== connection.peer);
-                    refreshMultiModeUI(); renderGameControls();
-                }
-                updateStatusMsg();
-            });
+      }
+      function refreshCam(id) {
+        broadcastCommand({ type: "refresh-cam", targetId: id });
+      }
+      function toggleMirror(id) {
+        if (isMulti && multiGuestsState[id]) {
+          multiGuestsState[id].mirrored = !multiGuestsState[id].mirrored;
+          refreshMultiModeUI();
         }
-        function updateStatusMsg() {
-            document.getElementById('status-msg').innerText = `✅ OBS: ${obsClients.length} | Gości: ${guestConnections.length}`;
-            document.getElementById('status-msg').style.color = "#00ff00";
+        broadcastCommand({ type: "toggle-mirror", targetId: id });
+      }
+      function toggleLabels() {
+        labelsVisible = !labelsVisible;
+        broadcastCommand({ type: "toggle-labels", show: labelsVisible });
+        updateToolBtn("btn-labels", labelsVisible, "🔤 Podpisy");
+      }
+      function toggleIcons() {
+        iconsVisible = !iconsVisible;
+        broadcastCommand({ type: "toggle-icons", show: iconsVisible });
+        updateToolBtn("btn-icons", iconsVisible, "🔇 Ikony Mute");
+      }
+      function updateToolBtn(id, state, text) {
+        const btn = document.getElementById(id);
+        btn.innerText = state ? `${text}: WIDOCZNE` : `${text}: UKRYTE`;
+        btn.className = state
+          ? "btn-tool btn-toggle-on"
+          : "btn-tool btn-toggle-off";
+      }
+      function renderGuestList(list) {
+        const container = document.getElementById("guest-list");
+        container.innerHTML = "";
+        if (list.length === 0) {
+          container.innerHTML =
+            '<p style="text-align:center; color:#777;">Brak gości online.</p>';
+          return;
         }
-        function handleData(data, sourceConn) {
-            if(data.type === 'guest-list' && !isMulti) {
-                data.list.forEach(g => { multiGuestsState[g.id] = g; if(!guestOrder.includes(g.id)) guestOrder.push(g.id); });
-                const newIds = data.list.map(g => g.id);
-                guestOrder = guestOrder.filter(id => newIds.includes(id));
-                refreshMultiModeUI(); renderGameControls();
-            }
-            if(data.type === 'stats-update') updateStats(data.stats);
-            if (isMulti) {
-                if(data.type === 'identify' && sourceConn) {
-                    if(!guestConnections.includes(sourceConn)) guestConnections.push(sourceConn);
-                    multiGuestsState[sourceConn.peer] = { id: sourceConn.peer, name: data.name || "Gość", muted: false, mirrored: false, conn: sourceConn };
-                    if (!guestOrder.includes(sourceConn.peer)) guestOrder.push(sourceConn.peer);
-                    refreshMultiModeUI(); renderGameControls(); updateStatusMsg();
-                }
-                if(data.type === 'mic-status' && sourceConn) {
-                    if (multiGuestsState[sourceConn.peer]) {
-                        multiGuestsState[sourceConn.peer].muted = data.muted;
-                        refreshMultiModeUI(); 
-                        obsClients.forEach(c => { if(c.open) c.send({ type: 'mic-status', peer: sourceConn.peer, muted: data.muted }); });
-                    }
-                }
-            }
-        }
-        function refreshMultiModeUI() {
-            const sortedList = [];
-            guestOrder.forEach(id => { if(multiGuestsState[id]) sortedList.push(multiGuestsState[id]); });
-            renderGuestList(sortedList);
-        }
-        function moveGuest(id, direction) {
-            const index = guestOrder.indexOf(id);
-            if (index === -1) return;
-            if (direction === 'up' && index > 0) { [guestOrder[index], guestOrder[index - 1]] = [guestOrder[index - 1], guestOrder[index]]; } 
-            else if (direction === 'down' && index < guestOrder.length - 1) { [guestOrder[index], guestOrder[index + 1]] = [guestOrder[index + 1], guestOrder[index]]; } 
-            else { return; }
-            refreshMultiModeUI(); renderGameControls(); broadcastCommand({ type: 'reorder-guests', order: guestOrder });
-        }
-        function broadcastCommand(cmd) {
-            if (isMulti) obsClients.forEach(c => { if(c.open) c.send(cmd); });
-            else if (conn && conn.open) conn.send(cmd);
-        }
-        function syncGuestsWithOBS() {
-            if (!isMulti) { alert("Tylko Multi!"); return; }
-            const btn = document.querySelector('.btn-sync');
-            btn.innerText = "⏳ Synchronizacja...";
-            guestConnections.forEach(g => { if (g.open) g.send({ type: 'force-sync' }); });
-            setTimeout(() => { btn.innerText = "📡 Wymuś połączenie z nowym OBS"; }, 1000);
-        }
-        function sendLayout(layoutName) { broadcastCommand({ type: 'layout', mode: layoutName }); }
-        function toggleGuestMic(id, currentMutedState) {
-            if (isMulti) {
-                const guest = multiGuestsState[id];
-                if (id.startsWith('fake-')) {
-                    guest.muted = !currentMutedState; refreshMultiModeUI();
-                    broadcastCommand({ type: 'remote-mute', targetId: id, state: guest.muted }); return;
-                }
-                if (guest && guest.conn && guest.conn.open) guest.conn.send({ type: 'mute-cmd', state: !currentMutedState });
-            } else { broadcastCommand({ type: 'remote-mute', targetId: id, state: !currentMutedState }); }
-        }
-        function refreshCam(id) { broadcastCommand({ type: 'refresh-cam', targetId: id }); }
-        function toggleMirror(id) {
-            if (isMulti && multiGuestsState[id]) { multiGuestsState[id].mirrored = !multiGuestsState[id].mirrored; refreshMultiModeUI(); }
-            broadcastCommand({ type: 'toggle-mirror', targetId: id });
-        }
-        function toggleLabels() {
-            labelsVisible = !labelsVisible;
-            broadcastCommand({ type: 'toggle-labels', show: labelsVisible });
-            updateToolBtn('btn-labels', labelsVisible, "🔤 Podpisy");
-        }
-        function toggleIcons() {
-            iconsVisible = !iconsVisible;
-            broadcastCommand({ type: 'toggle-icons', show: iconsVisible });
-            updateToolBtn('btn-icons', iconsVisible, "🔇 Ikony Mute");
-        }
-        function updateToolBtn(id, state, text) {
-            const btn = document.getElementById(id);
-            btn.innerText = state ? `${text}: WIDOCZNE` : `${text}: UKRYTE`;
-            btn.className = state ? "btn-tool btn-toggle-on" : "btn-tool btn-toggle-off";
-        }
-        function renderGuestList(list) {
-            const container = document.getElementById('guest-list');
-            container.innerHTML = "";
-            if(list.length === 0) { container.innerHTML = '<p style="text-align:center; color:#777;">Brak gości online.</p>'; return; }
-            list.forEach((guest, index) => {
-                const item = document.createElement('div');
-                item.className = 'guest-item';
-                const micClass = guest.muted ? 'mic-off' : 'mic-on';
-                const micIcon = guest.muted ? '🔇' : '🎤';
-                const statusText = guest.muted ? '(Wyciszony)' : '';
-                const mirrorClass = guest.mirrored ? 'mirror-on' : 'mirror-off';
-                const upVisibility = index === 0 ? 'visibility:hidden' : '';
-                const downVisibility = index === list.length - 1 ? 'visibility:hidden' : '';
-                item.innerHTML = `
+        list.forEach((guest, index) => {
+          const item = document.createElement("div");
+          item.className = "guest-item";
+          const micClass = guest.muted ? "mic-off" : "mic-on";
+          const micIcon = guest.muted ? "🔇" : "🎤";
+          const statusText = guest.muted ? "(Wyciszony)" : "";
+          const mirrorClass = guest.mirrored ? "mirror-on" : "mirror-off";
+          const upVisibility = index === 0 ? "visibility:hidden" : "";
+          const downVisibility =
+            index === list.length - 1 ? "visibility:hidden" : "";
+          item.innerHTML = `
                     <div class="guest-actions" style="margin-right: 10px;">
-                        <button class="btn-icon btn-move" onclick="moveGuest('${guest.id}', 'up')" style="${upVisibility}">⬆️</button>
-                        <button class="btn-icon btn-move" onclick="moveGuest('${guest.id}', 'down')" style="${downVisibility}">⬇️</button>
+                        <button class="btn-icon btn-move" onclick="moveGuest('${
+                          guest.id
+                        }', 'up')" style="${upVisibility}">⬆️</button>
+                        <button class="btn-icon btn-move" onclick="moveGuest('${
+                          guest.id
+                        }', 'down')" style="${downVisibility}">⬇️</button>
                     </div>
                     <div class="guest-info">
-                        <span class="guest-name">${guest.name} <small style="font-weight:normal; font-size:0.7em">${statusText}</small></span>
-                        <span id="stats-${guest.id}" class="guest-stats">${guest.id.startsWith('fake-') ? 'SZTUCZNY GOŚĆ' : 'Czekam na dane...'}</span>
+                        <span class="guest-name">${
+                          guest.name
+                        } <small style="font-weight:normal; font-size:0.7em">${statusText}</small></span>
+                        <span id="stats-${guest.id}" class="guest-stats">${
+            guest.id.startsWith("fake-") ? "SZTUCZNY GOŚĆ" : "Czekam na dane..."
+          }</span>
                     </div>
                     <div class="guest-actions">
-                        <button class="btn-icon ${mirrorClass}" onclick="toggleMirror('${guest.id}')" title="Lustrzane odbicie">🪞</button>
-                        <button class="btn-icon btn-refresh" onclick="refreshCam('${guest.id}')" title="Odśwież">🔄</button>
-                        <button class="btn-icon btn-mic ${micClass}" onclick="toggleGuestMic('${guest.id}', ${guest.muted})" title="Wycisz/Odcisz">${micIcon}</button>
+                        <button class="btn-icon ${mirrorClass}" onclick="toggleMirror('${
+            guest.id
+          }')" title="Lustrzane odbicie">🪞</button>
+                        <button class="btn-icon btn-refresh" onclick="refreshCam('${
+                          guest.id
+                        }')" title="Odśwież">🔄</button>
+                        <button class="btn-icon btn-mic ${micClass}" onclick="toggleGuestMic('${
+            guest.id
+          }', ${guest.muted})" title="Wycisz/Odcisz">${micIcon}</button>
                     </div>
                 `;
-                container.appendChild(item);
-            });
+          container.appendChild(item);
+        });
+      }
+      function updateStats(stats) {
+        for (const [id, data] of Object.entries(stats)) {
+          const el = document.getElementById(`stats-${id}`);
+          if (el) {
+            let colorClass = "stat-good";
+            if (data.bitrate < 1000 || data.packetLoss > 5)
+              colorClass = "stat-mid";
+            if (data.bitrate < 300 || data.packetLoss > 15)
+              colorClass = "stat-bad";
+            el.innerHTML = `Bitrate: <span class="${colorClass}">${data.bitrate} kbps</span> | Loss: <span class="${colorClass}">${data.packetLoss}</span> | Res: ${data.resolution}`;
+          }
         }
-        function updateStats(stats) {
-            for (const [id, data] of Object.entries(stats)) {
-                const el = document.getElementById(`stats-${id}`);
-                if (el) {
-                    let colorClass = 'stat-good';
-                    if (data.bitrate < 1000 || data.packetLoss > 5) colorClass = 'stat-mid';
-                    if (data.bitrate < 300 || data.packetLoss > 15) colorClass = 'stat-bad';
-                    el.innerHTML = `Bitrate: <span class="${colorClass}">${data.bitrate} kbps</span> | Loss: <span class="${colorClass}">${data.packetLoss}</span> | Res: ${data.resolution}`;
-                }
-            }
-        }
+      }
     </script>
-</body>
+  </body>
 </html>
