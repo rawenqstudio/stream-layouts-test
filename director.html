@@ -36,7 +36,7 @@
         .mirror-on { background: #007bff; border: 2px solid white; }
         .btn-move { background: #343a40; font-size: 14px; } .btn-move:hover { background: #495057; }
 
-        /* STYL GIER */
+        /* STYL GIER - Poprawiony */
         .game-section { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #444; display: none; }
         
         .game-menu-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
@@ -50,40 +50,48 @@
         .btn-game-start { background: #e91e63; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
         .btn-game-clear { background: #555; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
         
-        /* Lista Graczy w Grze - POPRAWIONA WIDOCZNOŚĆ */
-        #game-players-list { margin-top: 15px; text-align: left; }
+        /* Lista Graczy w Grze - WYMUSZENIE WIDOCZNOŚCI INPUTA */
+        #game-players-list { margin-top: 15px; text-align: left; width: 100%; }
+        
         .game-player-row { 
             display: flex; 
             align-items: center; 
-            gap: 5px; 
+            gap: 8px; 
             margin-bottom: 8px; 
             background: #3a3a3a; 
             padding: 10px; 
             border-radius: 5px; 
             border: 1px solid #555;
         }
+        
         .game-player-name { 
-            width: 80px; 
+            width: 90px; 
+            min-width: 90px;
             font-weight: bold; 
             font-size: 0.9em; 
             overflow: hidden; 
             text-overflow: ellipsis; 
             white-space: nowrap; 
         }
-        /* Pole tekstowe */
-        .game-input { 
-            background: #111; 
-            border: 1px solid #666; 
-            color: #fff; 
-            padding: 8px; 
+        
+        /* Styl Pola Tekstowego - Wysoki Kontrast */
+        input.game-input { 
+            display: inline-block !important; /* Wymuszenie widoczności */
+            background: #fff !important;      /* Białe tło */
+            border: 2px solid #666 !important; 
+            color: #000 !important;           /* Czarny tekst */
+            padding: 8px !important; 
             flex-grow: 1; 
-            border-radius: 3px; 
-            font-size: 14px; 
+            min-width: 50px;                  /* Minimalna szerokość */
+            border-radius: 4px; 
+            font-size: 14px;
+            height: auto;
         }
-        .game-input:focus { border-color: #00d2ff; outline: none; }
+        
+        input.game-input:focus { border-color: #00d2ff !important; outline: none; }
         
         /* Przyciski w grze */
-        .btn-mini { padding: 8px 10px; font-size: 13px; width: auto; font-weight: bold;}
+        .btn-mini { padding: 8px 12px; font-size: 13px; width: auto; font-weight: bold; border-radius: 4px; border:none; cursor: pointer; color:white; transition: 0.2s;}
         .btn-reroll { background: #9c27b0; } .btn-reroll:hover { background: #7b1fa2; }
         .btn-send { background: #009688; } .btn-send:hover { background: #00796b; }
     </style>
@@ -203,7 +211,6 @@
         
         const currentWords = {};
 
-        // --- NAWIGACJA GIER ---
         function toggleGamePanel() {
             const panel = document.getElementById('game-section');
             if (panel.style.display === 'block') {
@@ -218,7 +225,6 @@
         function openGame(gameId) {
             document.getElementById('game-menu').style.display = 'none';
             document.getElementById('game-heads-up').style.display = 'block';
-            // Renderujemy listę OD RAZU po wejściu do gry
             renderGameControls();
         }
 
@@ -227,7 +233,6 @@
             document.getElementById('game-menu').style.display = 'block';
         }
 
-        // --- LOGIKA GIER ---
         function dealCards() {
             const category = document.getElementById('game-category').value;
             const words = [...gameData[category]];
@@ -243,7 +248,6 @@
                 const randomIndex = Math.floor(Math.random() * words.length);
                 const word = words[randomIndex];
                 words.splice(randomIndex, 1);
-                
                 currentWords[id] = word;
             });
 
@@ -264,13 +268,8 @@
             currentWords[id] = newWord;
             broadcastCommand({ type: 'game-update-card', targetId: id, word: newWord });
             
-            // Efekt potwierdzenia
             input.style.borderColor = "#00ff00";
-            input.style.backgroundColor = "#224422";
-            setTimeout(() => { 
-                input.style.borderColor = "#666"; 
-                input.style.backgroundColor = "#111";
-            }, 500);
+            setTimeout(() => { input.style.borderColor = "#666"; }, 500);
         }
 
         function rerollGuest(id) {
@@ -311,8 +310,6 @@
             });
         }
 
-        // ... [RESZTA KODU BEZ ZMIAN] ...
-        
         window.onload = function() {
             if(!roomID) { document.getElementById('status-msg').innerText = "BŁĄD: Brak ID w linku."; return; }
             document.getElementById('target-id').value = roomID;
@@ -334,7 +331,7 @@
             broadcastCommand({ type: 'add-fake-guest', id: fakeId, name: randomName, img: randomImg });
             multiGuestsState[fakeId] = { id: fakeId, name: randomName, muted: false, mirrored: false, conn: null };
             if (!guestOrder.includes(fakeId)) guestOrder.push(fakeId);
-            refreshMultiModeUI(); renderGameControls(); // Odśwież panel gier
+            refreshMultiModeUI(); renderGameControls();
         }
         function connectToOBS() {
             const targetId = document.getElementById('target-id').value;
@@ -374,7 +371,7 @@
                 if (multiGuestsState[connection.peer]) {
                     delete multiGuestsState[connection.peer];
                     guestOrder = guestOrder.filter(id => id !== connection.peer);
-                    refreshMultiModeUI(); renderGameControls(); // Odśwież panel gier
+                    refreshMultiModeUI(); renderGameControls();
                 }
                 updateStatusMsg();
             });
@@ -388,7 +385,7 @@
                 data.list.forEach(g => { multiGuestsState[g.id] = g; if(!guestOrder.includes(g.id)) guestOrder.push(g.id); });
                 const newIds = data.list.map(g => g.id);
                 guestOrder = guestOrder.filter(id => newIds.includes(id));
-                refreshMultiModeUI(); renderGameControls(); // Odśwież panel gier
+                refreshMultiModeUI(); renderGameControls();
             }
             if(data.type === 'stats-update') updateStats(data.stats);
             if (isMulti) {
