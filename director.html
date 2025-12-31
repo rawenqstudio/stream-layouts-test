@@ -36,28 +36,54 @@
         .mirror-on { background: #007bff; border: 2px solid white; }
         .btn-move { background: #343a40; font-size: 14px; } .btn-move:hover { background: #495057; }
 
-        /* --- STYL MENU GIER --- */
+        /* STYL GIER */
         .game-section { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #444; display: none; }
         
-        /* Menu Wyboru */
         .game-menu-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
         .game-tile { width: 45%; padding: 20px; background: #444; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold; }
         .game-tile:hover { background: #555; transform: scale(1.05); }
         .game-tile-active { background: #e91e63; }
 
-        /* Widok Konkretnej Gry */
-        #game-heads-up { display: none; } /* Domyślnie ukryte */
+        #game-heads-up { display: none; }
         .game-select { width: 100%; padding: 10px; background: #444; color: white; border: none; border-radius: 5px; font-size: 16px; margin-bottom: 10px; }
         .btn-game-back { background: #666; width: 100%; padding: 8px; margin-bottom: 15px; }
         .btn-game-start { background: #e91e63; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
         .btn-game-clear { background: #555; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
         
-        /* Lista Graczy w Grze */
+        /* Lista Graczy w Grze - POPRAWIONA WIDOCZNOŚĆ */
         #game-players-list { margin-top: 15px; text-align: left; }
-        .game-player-row { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; background: #333; padding: 8px; border-radius: 5px; }
-        .game-player-name { width: 100px; font-weight: bold; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .game-input { background: #111; border: 1px solid #555; color: #fff; padding: 8px; flex-grow: 1; border-radius: 3px; font-size: 14px; }
-        .btn-mini { padding: 8px 12px; font-size: 14px; width: auto; }
+        .game-player-row { 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+            margin-bottom: 8px; 
+            background: #3a3a3a; 
+            padding: 10px; 
+            border-radius: 5px; 
+            border: 1px solid #555;
+        }
+        .game-player-name { 
+            width: 80px; 
+            font-weight: bold; 
+            font-size: 0.9em; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        }
+        /* Pole tekstowe */
+        .game-input { 
+            background: #111; 
+            border: 1px solid #666; 
+            color: #fff; 
+            padding: 8px; 
+            flex-grow: 1; 
+            border-radius: 3px; 
+            font-size: 14px; 
+        }
+        .game-input:focus { border-color: #00d2ff; outline: none; }
+        
+        /* Przyciski w grze */
+        .btn-mini { padding: 8px 10px; font-size: 13px; width: auto; font-weight: bold;}
         .btn-reroll { background: #9c27b0; } .btn-reroll:hover { background: #7b1fa2; }
         .btn-send { background: #009688; } .btn-send:hover { background: #00796b; }
     </style>
@@ -69,7 +95,6 @@
         <input type="text" id="target-id">
 
         <div class="controls" id="control-panel">
-            <!-- UKŁADY I NARZĘDZIA (BEZ ZMIAN) -->
             <h2>🎥 Układ kamer:</h2>
             <div style="margin-bottom: 15px; border-bottom: 1px solid #555; padding-bottom: 10px;">
                 <button class="btn-layout" onclick="sendLayout('layout-grid')" style="width: 90%; background: #6f42c1;">🔳 Pełna Siatka (Grid)</button>
@@ -93,13 +118,12 @@
             <button class="btn-tool btn-refresh-all" onclick="refreshCam('all')" style="margin-top: 20px;">🔄 Odśwież Bufory (Fix Lag)</button>
             <button class="btn-tool btn-sync" onclick="syncGuestsWithOBS()">📡 Wymuś połączenie z nowym OBS</button>
             
-            <!-- PRZYCISK POKAŻ/UKRYJ PANEL GIER -->
             <button class="btn-tool btn-toggle-game" onclick="toggleGamePanel()">🎮 Pokaż Panel Gier</button>
 
-            <!-- GŁÓWNY KONTENER GIER -->
+            <!-- SEKCJA GIER -->
             <div id="game-section" class="game-section">
                 
-                <!-- 1. MENU WYBORU GRY -->
+                <!-- MENU GIER -->
                 <div id="game-menu">
                     <h3>Wybierz Grę:</h3>
                     <div class="game-menu-grid">
@@ -112,9 +136,9 @@
                     </div>
                 </div>
 
-                <!-- 2. WIDOK GRY: CZÓŁKO -->
+                <!-- WIDOK GRY: CZÓŁKO -->
                 <div id="game-heads-up">
-                    <button class="btn-game-back" onclick="closeGame()">⬅ Wróć do menu gier</button>
+                    <button class="btn-game-back" onclick="closeGame()">⬅ Wróć do menu</button>
                     
                     <h3 style="margin-top:0">Gra: Czółko</h3>
                     <select id="game-category" class="game-select">
@@ -130,9 +154,10 @@
                         <button class="btn-game-start" onclick="dealCards()">🎲 Rozdaj Wszystkim</button>
                     </div>
                     
-                    <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
+                    <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0;">
+                    <p style="color: #aaa; font-size: 0.8em; margin-bottom: 5px;">Zarządzanie ręczne (Wpisz i kliknij Wyślij):</p>
                     
-                    <!-- Lista graczy do ręcznego sterowania -->
+                    <!-- TUTAJ POJAWIĄ SIĘ POLA TEKSTOWE DLA GRACZY -->
                     <div id="game-players-list"></div>
                 </div>
 
@@ -147,7 +172,6 @@
     </div>
 
     <script>
-        // BAZA DANYCH
         const gameData = {
             "Zwierzęta": ["Słoń", "Żyrafa", "Chomik", "Pingwin", "Rekin", "Wąż", "Orzeł", "Biedronka", "Krowa", "Kangur", "Zebra", "Lew", "Świnka", "Pies", "Kot", "Papuga", "Krokodyl", "Małpa", "Niedźwiedź", "Żaba"],
             "Filmy": ["Titanic", "Shrek", "Matrix", "Harry Potter", "Gwiezdne Wojny", "Król Lew", "Władca Pierścieni", "Joker", "Avengers", "Batman", "Spider-Man", "Forrest Gump", "Kraina Lodu", "Minionki", "Piraci z Karaibów"],
@@ -156,7 +180,6 @@
             "Przedmioty": ["Krzesło", "Telefon", "Samochód", "Długopis", "Butelka", "Książka", "Komputer", "Zegarek", "Lustro", "Klucz", "Młotek", "Szczoteczka", "Widelec", "Okulary", "Poduszka"]
         };
 
-        // ... (Zmienne PeerJS bez zmian) ...
         const urlParams = new URLSearchParams(window.location.search);
         const useStunOnly = urlParams.get('stunonly');
         const isMulti = urlParams.get('multi');
@@ -169,6 +192,7 @@
         ];
 
         const peer = new Peer(isMulti ? roomID : undefined, { config: { iceServers: selectedConfig } });
+        
         let conn = null; 
         const obsClients = []; 
         const guestConnections = []; 
@@ -177,17 +201,15 @@
         let labelsVisible = false;
         let iconsVisible = false;
         
-        // Stan Gry
         const currentWords = {};
 
-        // --- NAWIGACJA PO PANELU GIER ---
+        // --- NAWIGACJA GIER ---
         function toggleGamePanel() {
             const panel = document.getElementById('game-section');
             if (panel.style.display === 'block') {
                 panel.style.display = 'none';
             } else {
                 panel.style.display = 'block';
-                // Domyślnie pokaż menu
                 document.getElementById('game-menu').style.display = 'block';
                 document.getElementById('game-heads-up').style.display = 'none';
             }
@@ -196,7 +218,7 @@
         function openGame(gameId) {
             document.getElementById('game-menu').style.display = 'none';
             document.getElementById('game-heads-up').style.display = 'block';
-            // Od razu renderuj kontrolki, nawet jak nie ma haseł
+            // Renderujemy listę OD RAZU po wejściu do gry
             renderGameControls();
         }
 
@@ -205,9 +227,7 @@
             document.getElementById('game-menu').style.display = 'block';
         }
 
-        // --- LOGIKA GRY: CZÓŁKO ---
-        
-        // 1. Rozdaj wszystkim
+        // --- LOGIKA GIER ---
         function dealCards() {
             const category = document.getElementById('game-category').value;
             const words = [...gameData[category]];
@@ -232,30 +252,27 @@
             renderGameControls(); 
         }
 
-        // 2. Wyczyść
         function clearGame() {
             for (let id in currentWords) delete currentWords[id];
             broadcastCommand({ type: 'game-clear' });
             renderGameControls();
         }
 
-        // 3. Ręczna zmiana hasła (Update)
         function updateGuestWord(id) {
             const input = document.getElementById(`word-input-${id}`);
             const newWord = input.value;
-            
-            // Zapisz
             currentWords[id] = newWord;
-            
-            // Wyślij do OBS
             broadcastCommand({ type: 'game-update-card', targetId: id, word: newWord });
             
-            // Wizualne potwierdzenie (mignięcie)
+            // Efekt potwierdzenia
             input.style.borderColor = "#00ff00";
-            setTimeout(() => input.style.borderColor = "#555", 500);
+            input.style.backgroundColor = "#224422";
+            setTimeout(() => { 
+                input.style.borderColor = "#666"; 
+                input.style.backgroundColor = "#111";
+            }, 500);
         }
 
-        // 4. Losuj pojedynczo
         function rerollGuest(id) {
             const category = document.getElementById('game-category').value;
             const words = gameData[category];
@@ -264,10 +281,9 @@
             const input = document.getElementById(`word-input-${id}`);
             if(input) input.value = randomWord;
             
-            updateGuestWord(id); // Wywołaj funkcję aktualizacji z nową wartością inputa
+            updateGuestWord(id);
         }
 
-        // 5. Renderowanie listy w panelu gry
         function renderGameControls() {
             const container = document.getElementById('game-players-list');
             container.innerHTML = "";
@@ -275,7 +291,7 @@
             let guestIds = isMulti ? Object.keys(multiGuestsState) : guestOrder;
             
             if(guestIds.length === 0) {
-                container.innerHTML = "<p style='color:#777; font-size:0.9em;'>Brak gości. Zaproś kogoś, aby grać.</p>";
+                container.innerHTML = "<p style='color:#aaa; font-style:italic;'>Brak aktywnych gości. Zaproś kogoś lub dodaj sztucznych (Ctrl+Shift+F).</p>";
                 return;
             }
 
@@ -288,15 +304,14 @@
                 row.innerHTML = `
                     <div class="game-player-name" title="${name}">${name}</div>
                     <input type="text" id="word-input-${id}" class="game-input" value="${currentWord}" placeholder="Wpisz hasło...">
-                    <button class="btn-mini btn-reroll" onclick="rerollGuest('${id}')" title="Wylosuj nowe">🎲</button>
-                    <button class="btn-mini btn-send" onclick="updateGuestWord('${id}')" title="Wyślij do OBS">✅</button>
+                    <button class="btn-mini btn-reroll" onclick="rerollGuest('${id}')" title="Losuj z kategorii">🎲</button>
+                    <button class="btn-mini btn-send" onclick="updateGuestWord('${id}')" title="Wyślij ręcznie wpisane">Wyślij</button>
                 `;
                 container.appendChild(row);
             });
         }
 
-        // ... [RESZTA KODU BEZ ZMIAN: window.onload, connectToOBS, handleData itp.] ...
-        // SKOPIUJ PONIŻSZY BLOK DOKŁADNIE TAK JAK BYŁ, JEST NIEZBĘDNY
+        // ... [RESZTA KODU BEZ ZMIAN] ...
         
         window.onload = function() {
             if(!roomID) { document.getElementById('status-msg').innerText = "BŁĄD: Brak ID w linku."; return; }
@@ -319,7 +334,7 @@
             broadcastCommand({ type: 'add-fake-guest', id: fakeId, name: randomName, img: randomImg });
             multiGuestsState[fakeId] = { id: fakeId, name: randomName, muted: false, mirrored: false, conn: null };
             if (!guestOrder.includes(fakeId)) guestOrder.push(fakeId);
-            refreshMultiModeUI(); renderGameControls();
+            refreshMultiModeUI(); renderGameControls(); // Odśwież panel gier
         }
         function connectToOBS() {
             const targetId = document.getElementById('target-id').value;
@@ -359,7 +374,7 @@
                 if (multiGuestsState[connection.peer]) {
                     delete multiGuestsState[connection.peer];
                     guestOrder = guestOrder.filter(id => id !== connection.peer);
-                    refreshMultiModeUI(); renderGameControls();
+                    refreshMultiModeUI(); renderGameControls(); // Odśwież panel gier
                 }
                 updateStatusMsg();
             });
@@ -373,7 +388,7 @@
                 data.list.forEach(g => { multiGuestsState[g.id] = g; if(!guestOrder.includes(g.id)) guestOrder.push(g.id); });
                 const newIds = data.list.map(g => g.id);
                 guestOrder = guestOrder.filter(id => newIds.includes(id));
-                refreshMultiModeUI(); renderGameControls();
+                refreshMultiModeUI(); renderGameControls(); // Odśwież panel gier
             }
             if(data.type === 'stats-update') updateStats(data.stats);
             if (isMulti) {
