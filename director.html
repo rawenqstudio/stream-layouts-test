@@ -36,20 +36,30 @@
         .mirror-on { background: #007bff; border: 2px solid white; }
         .btn-move { background: #343a40; font-size: 14px; } .btn-move:hover { background: #495057; }
 
-        /* STYL GIER */
+        /* --- STYL MENU GIER --- */
         .game-section { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #444; display: none; }
+        
+        /* Menu Wyboru */
+        .game-menu-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .game-tile { width: 45%; padding: 20px; background: #444; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        .game-tile:hover { background: #555; transform: scale(1.05); }
+        .game-tile-active { background: #e91e63; }
+
+        /* Widok Konkretnej Gry */
+        #game-heads-up { display: none; } /* Domyślnie ukryte */
         .game-select { width: 100%; padding: 10px; background: #444; color: white; border: none; border-radius: 5px; font-size: 16px; margin-bottom: 10px; }
+        .btn-game-back { background: #666; width: 100%; padding: 8px; margin-bottom: 15px; }
         .btn-game-start { background: #e91e63; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
         .btn-game-clear { background: #555; width: 48%; display: inline-block; padding: 12px; font-weight: bold; }
         
         /* Lista Graczy w Grze */
-        #game-players-list { margin-top: 15px; }
-        .game-player-row { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; background: #333; padding: 5px; border-radius: 5px; }
-        .game-player-name { flex-grow: 1; font-weight: bold; font-size: 0.9em; }
-        .game-input { background: #111; border: 1px solid #555; color: yellow; padding: 5px; width: 100px; border-radius: 3px; }
-        .btn-mini { padding: 5px 8px; font-size: 12px; width: auto; }
-        .btn-reroll { background: #9c27b0; }
-        .btn-send { background: #009688; }
+        #game-players-list { margin-top: 15px; text-align: left; }
+        .game-player-row { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; background: #333; padding: 8px; border-radius: 5px; }
+        .game-player-name { width: 100px; font-weight: bold; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .game-input { background: #111; border: 1px solid #555; color: #fff; padding: 8px; flex-grow: 1; border-radius: 3px; font-size: 14px; }
+        .btn-mini { padding: 8px 12px; font-size: 14px; width: auto; }
+        .btn-reroll { background: #9c27b0; } .btn-reroll:hover { background: #7b1fa2; }
+        .btn-send { background: #009688; } .btn-send:hover { background: #00796b; }
     </style>
 </head>
 <body>
@@ -59,6 +69,7 @@
         <input type="text" id="target-id">
 
         <div class="controls" id="control-panel">
+            <!-- UKŁADY I NARZĘDZIA (BEZ ZMIAN) -->
             <h2>🎥 Układ kamer:</h2>
             <div style="margin-bottom: 15px; border-bottom: 1px solid #555; padding-bottom: 10px;">
                 <button class="btn-layout" onclick="sendLayout('layout-grid')" style="width: 90%; background: #6f42c1;">🔳 Pełna Siatka (Grid)</button>
@@ -82,26 +93,49 @@
             <button class="btn-tool btn-refresh-all" onclick="refreshCam('all')" style="margin-top: 20px;">🔄 Odśwież Bufory (Fix Lag)</button>
             <button class="btn-tool btn-sync" onclick="syncGuestsWithOBS()">📡 Wymuś połączenie z nowym OBS</button>
             
-            <!-- PRZYCISK POKAŻ/UKRYJ GRY -->
+            <!-- PRZYCISK POKAŻ/UKRYJ PANEL GIER -->
             <button class="btn-tool btn-toggle-game" onclick="toggleGamePanel()">🎮 Pokaż Panel Gier</button>
 
-            <!-- SEKCJA GIER (Ukryta domyślnie) -->
+            <!-- GŁÓWNY KONTENER GIER -->
             <div id="game-section" class="game-section">
-                <h3 style="margin-top:0">Gra: Czółko</h3>
-                <select id="game-category" class="game-select">
-                    <option value="Zwierzęta">🐶 Zwierzęta</option>
-                    <option value="Filmy">🎬 Filmy</option>
-                    <option value="Postacie">🦸 Postacie Fikcyjne</option>
-                    <option value="Zawody">👷 Zawody</option>
-                    <option value="Przedmioty">📦 Przedmioty</option>
-                </select>
-                <div style="display: flex; justify-content: space-between;">
-                    <button class="btn-game-clear" onclick="clearGame()">🗑️ Wyczyść</button>
-                    <button class="btn-game-start" onclick="dealCards()">🎲 Rozdaj Wszystkim</button>
-                </div>
                 
-                <!-- Lista graczy do ręcznego sterowania -->
-                <div id="game-players-list"></div>
+                <!-- 1. MENU WYBORU GRY -->
+                <div id="game-menu">
+                    <h3>Wybierz Grę:</h3>
+                    <div class="game-menu-grid">
+                        <div class="game-tile game-tile-active" onclick="openGame('heads-up')">
+                            🎲 Czółko<br><span style="font-size:0.8em; font-weight:normal;">Hasła na czoło</span>
+                        </div>
+                        <div class="game-tile" style="opacity: 0.5; cursor: not-allowed;">
+                            🚧 Kalambury<br><span style="font-size:0.8em; font-weight:normal;">(Wkrótce)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. WIDOK GRY: CZÓŁKO -->
+                <div id="game-heads-up">
+                    <button class="btn-game-back" onclick="closeGame()">⬅ Wróć do menu gier</button>
+                    
+                    <h3 style="margin-top:0">Gra: Czółko</h3>
+                    <select id="game-category" class="game-select">
+                        <option value="Zwierzęta">🐶 Zwierzęta</option>
+                        <option value="Filmy">🎬 Filmy</option>
+                        <option value="Postacie">🦸 Postacie Fikcyjne</option>
+                        <option value="Zawody">👷 Zawody</option>
+                        <option value="Przedmioty">📦 Przedmioty</option>
+                    </select>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                        <button class="btn-game-clear" onclick="clearGame()">🗑️ Wyczyść Wszystkich</button>
+                        <button class="btn-game-start" onclick="dealCards()">🎲 Rozdaj Wszystkim</button>
+                    </div>
+                    
+                    <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
+                    
+                    <!-- Lista graczy do ręcznego sterowania -->
+                    <div id="game-players-list"></div>
+                </div>
+
             </div>
             
             <h2>🎤 Zarządzanie Gośćmi:</h2>
@@ -113,7 +147,7 @@
     </div>
 
     <script>
-        // --- BAZA HASEŁ ---
+        // BAZA DANYCH
         const gameData = {
             "Zwierzęta": ["Słoń", "Żyrafa", "Chomik", "Pingwin", "Rekin", "Wąż", "Orzeł", "Biedronka", "Krowa", "Kangur", "Zebra", "Lew", "Świnka", "Pies", "Kot", "Papuga", "Krokodyl", "Małpa", "Niedźwiedź", "Żaba"],
             "Filmy": ["Titanic", "Shrek", "Matrix", "Harry Potter", "Gwiezdne Wojny", "Król Lew", "Władca Pierścieni", "Joker", "Avengers", "Batman", "Spider-Man", "Forrest Gump", "Kraina Lodu", "Minionki", "Piraci z Karaibów"],
@@ -122,6 +156,7 @@
             "Przedmioty": ["Krzesło", "Telefon", "Samochód", "Długopis", "Butelka", "Książka", "Komputer", "Zegarek", "Lustro", "Klucz", "Młotek", "Szczoteczka", "Widelec", "Okulary", "Poduszka"]
         };
 
+        // ... (Zmienne PeerJS bez zmian) ...
         const urlParams = new URLSearchParams(window.location.search);
         const useStunOnly = urlParams.get('stunonly');
         const isMulti = urlParams.get('multi');
@@ -134,7 +169,6 @@
         ];
 
         const peer = new Peer(isMulti ? roomID : undefined, { config: { iceServers: selectedConfig } });
-        
         let conn = null; 
         const obsClients = []; 
         const guestConnections = []; 
@@ -143,42 +177,40 @@
         let labelsVisible = false;
         let iconsVisible = false;
         
-        // Stan Gry (Kto jakie ma hasło)
+        // Stan Gry
         const currentWords = {};
 
-        window.onload = function() {
-            if(!roomID) {
-                document.getElementById('status-msg').innerText = "BŁĄD: Brak ID w linku.";
-                return;
-            }
-            document.getElementById('target-id').value = roomID;
-
-            if (isMulti) {
-                document.getElementById('status-msg').innerText = "📡 Tryb Multi: SERWER AKTYWNY";
-                document.getElementById('control-panel').style.display = "block";
-                peer.on('connection', (connection) => handleIncomingConnection(connection));
-            } else {
-                document.getElementById('status-msg').innerText = "Szukam OBS...";
-                setTimeout(connectToOBS, 1000);
-            }
-        }
-
-        // --- LOGIKA GIER (ROZBUDOWANA) ---
+        // --- NAWIGACJA PO PANELU GIER ---
         function toggleGamePanel() {
             const panel = document.getElementById('game-section');
             if (panel.style.display === 'block') {
                 panel.style.display = 'none';
             } else {
                 panel.style.display = 'block';
-                // Odśwież listę graczy w panelu gry
-                renderGameControls();
+                // Domyślnie pokaż menu
+                document.getElementById('game-menu').style.display = 'block';
+                document.getElementById('game-heads-up').style.display = 'none';
             }
         }
 
+        function openGame(gameId) {
+            document.getElementById('game-menu').style.display = 'none';
+            document.getElementById('game-heads-up').style.display = 'block';
+            // Od razu renderuj kontrolki, nawet jak nie ma haseł
+            renderGameControls();
+        }
+
+        function closeGame() {
+            document.getElementById('game-heads-up').style.display = 'none';
+            document.getElementById('game-menu').style.display = 'block';
+        }
+
+        // --- LOGIKA GRY: CZÓŁKO ---
+        
+        // 1. Rozdaj wszystkim
         function dealCards() {
             const category = document.getElementById('game-category').value;
             const words = [...gameData[category]];
-            
             let guestIds = isMulti ? Object.keys(multiGuestsState) : guestOrder;
 
             if(guestIds.length === 0) {
@@ -197,46 +229,56 @@
 
             console.log("Rozdano karty:", currentWords);
             broadcastCommand({ type: 'game-deal', cards: currentWords });
-            renderGameControls(); // Zaktualizuj widok w panelu gry
+            renderGameControls(); 
         }
 
+        // 2. Wyczyść
         function clearGame() {
             for (let id in currentWords) delete currentWords[id];
             broadcastCommand({ type: 'game-clear' });
             renderGameControls();
         }
 
-        // Indywidualna zmiana hasła
+        // 3. Ręczna zmiana hasła (Update)
         function updateGuestWord(id) {
             const input = document.getElementById(`word-input-${id}`);
             const newWord = input.value;
-            if (newWord) {
-                currentWords[id] = newWord;
-                broadcastCommand({ type: 'game-update-card', targetId: id, word: newWord });
-            }
+            
+            // Zapisz
+            currentWords[id] = newWord;
+            
+            // Wyślij do OBS
+            broadcastCommand({ type: 'game-update-card', targetId: id, word: newWord });
+            
+            // Wizualne potwierdzenie (mignięcie)
+            input.style.borderColor = "#00ff00";
+            setTimeout(() => input.style.borderColor = "#555", 500);
         }
 
-        // Indywidualne losowanie
+        // 4. Losuj pojedynczo
         function rerollGuest(id) {
             const category = document.getElementById('game-category').value;
             const words = gameData[category];
             const randomWord = words[Math.floor(Math.random() * words.length)];
             
-            // Wpisz do inputa i wyślij
             const input = document.getElementById(`word-input-${id}`);
             if(input) input.value = randomWord;
             
-            currentWords[id] = randomWord;
-            broadcastCommand({ type: 'game-update-card', targetId: id, word: randomWord });
+            updateGuestWord(id); // Wywołaj funkcję aktualizacji z nową wartością inputa
         }
 
-        // Renderowanie listy kontrolnej w panelu gry
+        // 5. Renderowanie listy w panelu gry
         function renderGameControls() {
             const container = document.getElementById('game-players-list');
             container.innerHTML = "";
             
             let guestIds = isMulti ? Object.keys(multiGuestsState) : guestOrder;
             
+            if(guestIds.length === 0) {
+                container.innerHTML = "<p style='color:#777; font-size:0.9em;'>Brak gości. Zaproś kogoś, aby grać.</p>";
+                return;
+            }
+
             guestIds.forEach(id => {
                 const name = (multiGuestsState[id]) ? multiGuestsState[id].name : "Gość";
                 const currentWord = currentWords[id] || "";
@@ -244,37 +286,41 @@
                 const row = document.createElement('div');
                 row.className = 'game-player-row';
                 row.innerHTML = `
-                    <div class="game-player-name">${name}</div>
-                    <input type="text" id="word-input-${id}" class="game-input" value="${currentWord}">
-                    <button class="btn-mini btn-reroll" onclick="rerollGuest('${id}')">🎲</button>
-                    <button class="btn-mini btn-send" onclick="updateGuestWord('${id}')">✅</button>
+                    <div class="game-player-name" title="${name}">${name}</div>
+                    <input type="text" id="word-input-${id}" class="game-input" value="${currentWord}" placeholder="Wpisz hasło...">
+                    <button class="btn-mini btn-reroll" onclick="rerollGuest('${id}')" title="Wylosuj nowe">🎲</button>
+                    <button class="btn-mini btn-send" onclick="updateGuestWord('${id}')" title="Wyślij do OBS">✅</button>
                 `;
                 container.appendChild(row);
             });
         }
-        // ------------------
 
-        // ... [RESZTA KODU BEZ ZMIAN - connectToOBS, handleIncomingConnection itp.] ...
-        // (Wklejam skrótowo resztę, aby plik był kompletny, ale logika jest ta sama co wcześniej)
+        // ... [RESZTA KODU BEZ ZMIAN: window.onload, connectToOBS, handleData itp.] ...
+        // SKOPIUJ PONIŻSZY BLOK DOKŁADNIE TAK JAK BYŁ, JEST NIEZBĘDNY
         
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.shiftKey && (e.key === 'F' || e.key === 'f')) addFakeGuest();
-        });
-
+        window.onload = function() {
+            if(!roomID) { document.getElementById('status-msg').innerText = "BŁĄD: Brak ID w linku."; return; }
+            document.getElementById('target-id').value = roomID;
+            if (isMulti) {
+                document.getElementById('status-msg').innerText = "📡 Tryb Multi: SERWER AKTYWNY";
+                document.getElementById('control-panel').style.display = "block";
+                peer.on('connection', handleIncomingConnection);
+            } else {
+                document.getElementById('status-msg').innerText = "Szukam OBS...";
+                setTimeout(connectToOBS, 1000);
+            }
+        }
+        document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && (e.key === 'F' || e.key === 'f')) addFakeGuest(); });
         function addFakeGuest() {
             const fakeId = 'fake-' + Math.floor(Math.random() * 10000);
             const fakeNames = ["Sztuczny Jan", "Testowa Anna", "Bot Marek", "Demo Zosia"];
             const randomName = fakeNames[Math.floor(Math.random() * fakeNames.length)];
             const randomImg = `https://picsum.photos/seed/${fakeId}/640/360`;
-
             broadcastCommand({ type: 'add-fake-guest', id: fakeId, name: randomName, img: randomImg });
-
             multiGuestsState[fakeId] = { id: fakeId, name: randomName, muted: false, mirrored: false, conn: null };
             if (!guestOrder.includes(fakeId)) guestOrder.push(fakeId);
-            refreshMultiModeUI();
-            renderGameControls(); // Odśwież też panel gry
+            refreshMultiModeUI(); renderGameControls();
         }
-
         function connectToOBS() {
             const targetId = document.getElementById('target-id').value;
             conn = peer.connect(targetId);
@@ -287,7 +333,6 @@
             conn.on('data', (data) => handleData(data));
             conn.on('error', (err) => alert("Błąd: " + err));
         }
-
         function handleIncomingConnection(connection) {
             connection.on('open', () => console.log("Połączenie:", connection.peer));
             connection.on('data', (data) => {
@@ -314,28 +359,21 @@
                 if (multiGuestsState[connection.peer]) {
                     delete multiGuestsState[connection.peer];
                     guestOrder = guestOrder.filter(id => id !== connection.peer);
-                    refreshMultiModeUI();
-                    renderGameControls();
+                    refreshMultiModeUI(); renderGameControls();
                 }
                 updateStatusMsg();
             });
         }
-
         function updateStatusMsg() {
             document.getElementById('status-msg').innerText = `✅ OBS: ${obsClients.length} | Gości: ${guestConnections.length}`;
             document.getElementById('status-msg').style.color = "#00ff00";
         }
-
         function handleData(data, sourceConn) {
             if(data.type === 'guest-list' && !isMulti) {
-                data.list.forEach(g => {
-                    multiGuestsState[g.id] = g;
-                    if(!guestOrder.includes(g.id)) guestOrder.push(g.id);
-                });
+                data.list.forEach(g => { multiGuestsState[g.id] = g; if(!guestOrder.includes(g.id)) guestOrder.push(g.id); });
                 const newIds = data.list.map(g => g.id);
                 guestOrder = guestOrder.filter(id => newIds.includes(id));
-                refreshMultiModeUI();
-                renderGameControls();
+                refreshMultiModeUI(); renderGameControls();
             }
             if(data.type === 'stats-update') updateStats(data.stats);
             if (isMulti) {
@@ -343,9 +381,7 @@
                     if(!guestConnections.includes(sourceConn)) guestConnections.push(sourceConn);
                     multiGuestsState[sourceConn.peer] = { id: sourceConn.peer, name: data.name || "Gość", muted: false, mirrored: false, conn: sourceConn };
                     if (!guestOrder.includes(sourceConn.peer)) guestOrder.push(sourceConn.peer);
-                    refreshMultiModeUI();
-                    renderGameControls();
-                    updateStatusMsg();
+                    refreshMultiModeUI(); renderGameControls(); updateStatusMsg();
                 }
                 if(data.type === 'mic-status' && sourceConn) {
                     if (multiGuestsState[sourceConn.peer]) {
@@ -356,32 +392,23 @@
                 }
             }
         }
-
         function refreshMultiModeUI() {
             const sortedList = [];
-            guestOrder.forEach(id => {
-                if(multiGuestsState[id]) sortedList.push(multiGuestsState[id]);
-            });
+            guestOrder.forEach(id => { if(multiGuestsState[id]) sortedList.push(multiGuestsState[id]); });
             renderGuestList(sortedList);
         }
-
         function moveGuest(id, direction) {
             const index = guestOrder.indexOf(id);
             if (index === -1) return;
-            if (direction === 'up' && index > 0) {
-                [guestOrder[index], guestOrder[index - 1]] = [guestOrder[index - 1], guestOrder[index]];
-            } else if (direction === 'down' && index < guestOrder.length - 1) {
-                [guestOrder[index], guestOrder[index + 1]] = [guestOrder[index + 1], guestOrder[index]];
-            } else { return; }
-            refreshMultiModeUI(); 
-            broadcastCommand({ type: 'reorder-guests', order: guestOrder });
+            if (direction === 'up' && index > 0) { [guestOrder[index], guestOrder[index - 1]] = [guestOrder[index - 1], guestOrder[index]]; } 
+            else if (direction === 'down' && index < guestOrder.length - 1) { [guestOrder[index], guestOrder[index + 1]] = [guestOrder[index + 1], guestOrder[index]]; } 
+            else { return; }
+            refreshMultiModeUI(); renderGameControls(); broadcastCommand({ type: 'reorder-guests', order: guestOrder });
         }
-
         function broadcastCommand(cmd) {
             if (isMulti) obsClients.forEach(c => { if(c.open) c.send(cmd); });
             else if (conn && conn.open) conn.send(cmd);
         }
-
         function syncGuestsWithOBS() {
             if (!isMulti) { alert("Tylko Multi!"); return; }
             const btn = document.querySelector('.btn-sync');
@@ -389,28 +416,20 @@
             guestConnections.forEach(g => { if (g.open) g.send({ type: 'force-sync' }); });
             setTimeout(() => { btn.innerText = "📡 Wymuś połączenie z nowym OBS"; }, 1000);
         }
-
         function sendLayout(layoutName) { broadcastCommand({ type: 'layout', mode: layoutName }); }
         function toggleGuestMic(id, currentMutedState) {
             if (isMulti) {
                 const guest = multiGuestsState[id];
                 if (id.startsWith('fake-')) {
-                    guest.muted = !currentMutedState;
-                    refreshMultiModeUI();
-                    broadcastCommand({ type: 'remote-mute', targetId: id, state: guest.muted });
-                    return;
+                    guest.muted = !currentMutedState; refreshMultiModeUI();
+                    broadcastCommand({ type: 'remote-mute', targetId: id, state: guest.muted }); return;
                 }
                 if (guest && guest.conn && guest.conn.open) guest.conn.send({ type: 'mute-cmd', state: !currentMutedState });
-            } else {
-                broadcastCommand({ type: 'remote-mute', targetId: id, state: !currentMutedState });
-            }
+            } else { broadcastCommand({ type: 'remote-mute', targetId: id, state: !currentMutedState }); }
         }
         function refreshCam(id) { broadcastCommand({ type: 'refresh-cam', targetId: id }); }
         function toggleMirror(id) {
-            if (isMulti && multiGuestsState[id]) {
-                multiGuestsState[id].mirrored = !multiGuestsState[id].mirrored;
-                refreshMultiModeUI();
-            }
+            if (isMulti && multiGuestsState[id]) { multiGuestsState[id].mirrored = !multiGuestsState[id].mirrored; refreshMultiModeUI(); }
             broadcastCommand({ type: 'toggle-mirror', targetId: id });
         }
         function toggleLabels() {
@@ -428,14 +447,10 @@
             btn.innerText = state ? `${text}: WIDOCZNE` : `${text}: UKRYTE`;
             btn.className = state ? "btn-tool btn-toggle-on" : "btn-tool btn-toggle-off";
         }
-
         function renderGuestList(list) {
             const container = document.getElementById('guest-list');
             container.innerHTML = "";
-            if(list.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#777;">Brak gości online.</p>';
-                return;
-            }
+            if(list.length === 0) { container.innerHTML = '<p style="text-align:center; color:#777;">Brak gości online.</p>'; return; }
             list.forEach((guest, index) => {
                 const item = document.createElement('div');
                 item.className = 'guest-item';
@@ -445,7 +460,6 @@
                 const mirrorClass = guest.mirrored ? 'mirror-on' : 'mirror-off';
                 const upVisibility = index === 0 ? 'visibility:hidden' : '';
                 const downVisibility = index === list.length - 1 ? 'visibility:hidden' : '';
-
                 item.innerHTML = `
                     <div class="guest-actions" style="margin-right: 10px;">
                         <button class="btn-icon btn-move" onclick="moveGuest('${guest.id}', 'up')" style="${upVisibility}">⬆️</button>
@@ -453,9 +467,7 @@
                     </div>
                     <div class="guest-info">
                         <span class="guest-name">${guest.name} <small style="font-weight:normal; font-size:0.7em">${statusText}</small></span>
-                        <span id="stats-${guest.id}" class="guest-stats">
-                            ${guest.id.startsWith('fake-') ? 'SZTUCZNY GOŚĆ' : 'Czekam na dane...'}
-                        </span>
+                        <span id="stats-${guest.id}" class="guest-stats">${guest.id.startsWith('fake-') ? 'SZTUCZNY GOŚĆ' : 'Czekam na dane...'}</span>
                     </div>
                     <div class="guest-actions">
                         <button class="btn-icon ${mirrorClass}" onclick="toggleMirror('${guest.id}')" title="Lustrzane odbicie">🪞</button>
@@ -466,7 +478,6 @@
                 container.appendChild(item);
             });
         }
-
         function updateStats(stats) {
             for (const [id, data] of Object.entries(stats)) {
                 const el = document.getElementById(`stats-${id}`);

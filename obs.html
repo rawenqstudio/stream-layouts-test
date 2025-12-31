@@ -23,10 +23,10 @@
         #video-container:not(.show-labels) .label { display: none !important; }
         #video-container:not(.show-icons) .mute-icon { display: none !important; }
 
-        /* --- KARTKA CZÓŁKO (Zmieniono top na 5%) --- */
+        /* --- KARTKA CZÓŁKO (TOP 5%) --- */
         .game-card {
             position: absolute;
-            top: 5%; /* BYŁO 15%, JEST 5% */
+            top: 5%; 
             left: 50%;
             transform: translateX(-50%);
             background: #ffeb3b;
@@ -41,7 +41,7 @@
             text-align: center;
             border: 2px solid #fdd835;
             animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            white-space: nowrap; /* Zapobiega łamaniu krótkich haseł */
+            white-space: nowrap;
         }
 
         @keyframes popIn {
@@ -161,6 +161,7 @@
 
         function handleData(data, conn) {
             if(data.type === 'layout') container.className = data.mode;
+            
             if(data.type === 'toggle-labels') {
                 if (data.show) container.classList.add('show-labels');
                 else container.classList.remove('show-labels');
@@ -199,7 +200,6 @@
                     setGameCard(id, word);
                 }
             }
-            // NOWOŚĆ: Aktualizacja pojedynczej karty
             if(data.type === 'game-update-card') {
                 setGameCard(data.targetId, data.word);
             }
@@ -251,7 +251,6 @@
             container.setAttribute('data-count', count);
         }
 
-        // --- PĘTLA LOGIKI ---
         setInterval(async () => {
             const now = Date.now();
             const statsReport = {};
